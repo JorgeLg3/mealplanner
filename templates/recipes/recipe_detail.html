@@ -12,4 +12,7 @@
       <li>No ingredients yet.</li>
     {% endfor %}
   </ul>
+
+  <a href="{% url 'recipe_update' recipe.pk %}">Edit</a>
+  <a href="{% url 'recipe_delete' recipe.pk %}">Delete</a>
 {% endblock %}
