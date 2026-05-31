@@ -3,16 +3,26 @@
 {% block content %}
   <h1>{{ recipe.name }}</h1>
   <p>{{ recipe.description }}</p>
+  <p>Servings: {{recipe.servings}}</p>
 
   <h2>Ingredients</h2>
   <ul>
     {% for recipe_ingredient in recipe.recipeingredient_set.all %}
-      <li>{{ recipe_ingredient }}</li>
+      <li>
+        <span>{{ recipe_ingredient.quantity|floatformat }}</span>
+        <span>{{ recipe_ingredient.unit}}</span> 
+        <span>{{recipe_ingredient.ingredient}}</span> 
+        {% if recipe_ingredient.prep_note %}
+          <span>-</span>
+            <span>{{recipe_ingredient.prep_note}}</span>
+        {% endif %}
+      </li>
     {% empty %}
       <li>No ingredients yet.</li>
     {% endfor %}
   </ul>
-
-  <a href="{% url 'recipe_update' recipe.pk %}">Edit</a>
-  <a href="{% url 'recipe_delete' recipe.pk %}">Delete</a>
+  {% if user.is_authenticated %}
+    <a href="{% url 'recipe_update' recipe.pk %}">Edit</a>
+    <a href="{% url 'recipe_delete' recipe.pk %}">Delete</a>
+  {% endif %}
 {% endblock %}

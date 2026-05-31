@@ -1,12 +1,21 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
-from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import (
+    DetailView,
+    ListView,
+    CreateView,
+    UpdateView,
+    DeleteView,
+)
 from .models import Recipe
 from .forms import RecipeIngredientFormSet
+
 
 class RecipeListView(ListView):
     model = Recipe
     template_name = "recipes/recipe_list.html"
+
 
 class RecipeDetailView(DetailView):
     model = Recipe
@@ -17,10 +26,10 @@ class RecipeDetailView(DetailView):
     )
 
 
-class RecipeCreateView(CreateView):
+class RecipeCreateView(LoginRequiredMixin, CreateView):
     model = Recipe
     template_name = "recipes/recipe_create.html"
-    fields = ["name", "category", "description"]
+    fields = ["name", "category", "description", "servings"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -38,16 +47,16 @@ class RecipeCreateView(CreateView):
             return self.render_to_response(self.get_context_data(form=form))
 
         form.instance.author = self.request.user
-        self.object = form.save()          # now the Recipe has a PK
-        formset.instance = self.object     # point the child rows at it
+        self.object = form.save()  # now the Recipe has a PK
+        formset.instance = self.object  # point the child rows at it
         formset.save()
         return redirect(self.object.get_absolute_url())
 
 
-class RecipeUpdateView(UpdateView):
+class RecipeUpdateView(LoginRequiredMixin, UpdateView):
     model = Recipe
     template_name = "recipes/recipe_update.html"
-    fields = ["name", "category", "description"]
+    fields = ["name", "category", "description", "servings"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -57,7 +66,9 @@ class RecipeUpdateView(UpdateView):
                 self.request.POST, instance=self.object
             )
         else:
-            context["ingredient_formset"] = RecipeIngredientFormSet(instance=self.object)
+            context["ingredient_formset"] = RecipeIngredientFormSet(
+                instance=self.object
+            )
         return context
 
     def form_valid(self, form):
@@ -73,7 +84,7 @@ class RecipeUpdateView(UpdateView):
         return redirect(self.object.get_absolute_url())
 
 
-class RecipeDeleteView(DeleteView):
+class RecipeDeleteView(LoginRequiredMixin, DeleteView):
     model = Recipe
     template_name = "recipes/recipe_confirm_delete.html"
     success_url = reverse_lazy("recipe_list")

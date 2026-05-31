@@ -14,7 +14,8 @@ class Recipe(models.Model):
     name = models.CharField(max_length=200)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
     )
     category = models.ForeignKey(
         RecipeCategory,
@@ -22,10 +23,11 @@ class Recipe(models.Model):
         null=True,
     )
     description = models.TextField()
+    servings = models.PositiveIntegerField()
 
     def __str__(self):
         return self.name
-    
+
     def get_absolute_url(self):
         return reverse("recipe_detail", kwargs={"pk": self.pk})
 
@@ -73,7 +75,7 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     quantity = models.DecimalField(
         max_digits=12,
-        decimal_places=4,
+        decimal_places=2,
         null=True,
         blank=True,
     )
@@ -86,4 +88,4 @@ class RecipeIngredient(models.Model):
     prep_note = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.quantity or ''} {self.unit or ''} {self.ingredient} {self.prep_note or ''}".strip()
+        return f"{self.quantity or ''} {self.unit or ''} {self.ingredient}".strip()

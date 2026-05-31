@@ -8,6 +8,6 @@ RecipeIngredientFormSet = inlineformset_factory(
     Recipe,
     RecipeIngredient,
     fields=["ingredient", "quantity", "unit", "prep_note"],
-    extra=1,          
+    extra=1,
     can_delete=True,
 )
