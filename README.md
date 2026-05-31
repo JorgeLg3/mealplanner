@@ -1,4 +1,7 @@
-# Django docker template
+# Mealprep App
+
+This is the new I'm developing for my own use where I want to track the recipes I usually do. Organize the meal calendar of the following weeks. And auto generate the list of ingredients that I need to buy.
+
 ## Introduction
 This is the codebase I have developed as template repo for future Django app developements. Including basic features and configurations ready to go
 - Custom User model in case you need to customize the UserModel later on.
