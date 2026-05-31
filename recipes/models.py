@@ -86,4 +86,4 @@ class RecipeIngredient(models.Model):
     prep_note = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.quantity or ''} {self.unit or ''} {self.ingredient}".strip()
+        return f"{self.quantity or ''} {self.unit or ''} {self.ingredient} {self.prep_note or ''}".strip()
