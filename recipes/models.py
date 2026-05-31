@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 from django.urls import reverse
 
 
@@ -46,6 +47,20 @@ class Ingredient(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+
+    class Meta:
+        constraints = [
+            # Case-insensitive uniqueness: blocks "Tomato" vs "tomato" duplicates.
+            models.UniqueConstraint(
+                Lower("name"), name="unique_ingredient_name_ci"
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        # Store ingredient names normalized (stripped + lowercased) so they're
+        # consistent regardless of how they were created (form, admin, shell).
+        self.name = self.name.strip().lower()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

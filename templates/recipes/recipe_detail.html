@@ -9,8 +9,12 @@
   <ul>
     {% for recipe_ingredient in recipe.recipeingredient_set.all %}
       <li>
-        <span>{{ recipe_ingredient.quantity|floatformat }}</span>
-        <span>{{ recipe_ingredient.unit}}</span> 
+        {% if recipe_ingredient.quantity%}
+          <span>{{ recipe_ingredient.quantity|floatformat }}</span>
+        {% endif %}
+        {% if recipe_ingredient.unit %}
+          <span>{{ recipe_ingredient.unit}}</span>
+        {% endif %}
         <span>{{recipe_ingredient.ingredient}}</span> 
         {% if recipe_ingredient.prep_note %}
           <span>-</span>

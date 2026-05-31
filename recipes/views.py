@@ -8,7 +8,7 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from .models import Recipe
+from .models import Recipe, Ingredient
 from .forms import RecipeIngredientFormSet
 
 
@@ -37,6 +37,7 @@ class RecipeCreateView(LoginRequiredMixin, CreateView):
             context["ingredient_formset"] = RecipeIngredientFormSet(self.request.POST)
         else:
             context["ingredient_formset"] = RecipeIngredientFormSet()
+        context["ingredients"] = Ingredient.objects.all()
         return context
 
     def form_valid(self, form):
@@ -69,6 +70,7 @@ class RecipeUpdateView(LoginRequiredMixin, UpdateView):
             context["ingredient_formset"] = RecipeIngredientFormSet(
                 instance=self.object
             )
+        context["ingredients"] = Ingredient.objects.all()
         return context
 
     def form_valid(self, form):

@@ -20,6 +20,13 @@
     </template>
     <button type="button" id="add-ingredient">Add ingredient</button>
 
+    {# Autocomplete options for the ingredient_name text inputs (list="ingredient-options"). #}
+    <datalist id="ingredient-options">
+      {% for ingredient in ingredients %}
+        <option value="{{ ingredient.name }}"></option>
+      {% endfor %}
+    </datalist>
+
     <input type="submit" value="Save">
   </form>
 
