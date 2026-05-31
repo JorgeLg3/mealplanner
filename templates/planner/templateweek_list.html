@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Week templates</h1>
+  <ul>
+    {% for template in templateweek_list %}
+      <li>
+        <a href="{% url 'templateweek_detail' template.pk %}">{{ template.name }}</a>
+        {% if template.description %} — {{ template.description }}{% endif %}
+      </li>
+    {% empty %}
+      <li>No week templates yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

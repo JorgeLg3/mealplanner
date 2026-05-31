@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('planner', '0001_initial'),
+        ("planner", "0001_initial"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='WeekTemplate',
-            new_name='TemplateWeek',
+            old_name="WeekTemplate",
+            new_name="TemplateWeek",
         ),
     ]

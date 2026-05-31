@@ -1,0 +1,35 @@
+/* Planner app styles */
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.week-grid__day {
+  font-weight: bold;
+  text-align: center;
+  padding: 0.5rem;
+  border-bottom: 2px solid #ccc;
+}
+
+.week-grid__cell {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  min-height: 3.5rem;
+}
+
+.week-grid__meal-type {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.week-grid__empty {
+  color: #bbb;
+}
