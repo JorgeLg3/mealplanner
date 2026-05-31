@@ -1,0 +1,3 @@
+# this can be deleted after project initialization
+# is required for local development server
+# since django requires the db path to exists

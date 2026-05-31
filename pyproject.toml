@@ -1,0 +1,19 @@
+[project]
+name = "thejorgelab-blog"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.0.5",
+    "environs[django]>=15.0.1",
+    "gunicorn>=26.0.0",
+    "pillow>=12.2.0",
+    "whitenoise>=6.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+    "ty>=0.0.35",
+]
