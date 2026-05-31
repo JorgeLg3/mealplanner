@@ -51,9 +51,7 @@ class Ingredient(models.Model):
     class Meta:
         constraints = [
             # Case-insensitive uniqueness: blocks "Tomato" vs "tomato" duplicates.
-            models.UniqueConstraint(
-                Lower("name"), name="unique_ingredient_name_ci"
-            )
+            models.UniqueConstraint(Lower("name"), name="unique_ingredient_name_ci")
         ]
 
     def save(self, *args, **kwargs):

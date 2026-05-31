@@ -5,19 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('recipes', '0002_recipe_servings_alter_recipe_author'),
+        ("recipes", "0002_recipe_servings_alter_recipe_author"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='recipeingredient',
-            name='quantity',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True),
+            model_name="recipeingredient",
+            name="quantity",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=12, null=True
+            ),
         ),
         migrations.AddConstraint(
-            model_name='ingredient',
-            constraint=models.UniqueConstraint(django.db.models.functions.text.Lower('name'), name='unique_ingredient_name_ci'),
+            model_name="ingredient",
+            constraint=models.UniqueConstraint(
+                django.db.models.functions.text.Lower("name"),
+                name="unique_ingredient_name_ci",
+            ),
         ),
     ]
