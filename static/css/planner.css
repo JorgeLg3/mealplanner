@@ -33,3 +33,32 @@
 .week-grid__empty {
   color: #bbb;
 }
+
+/* Day-of-month number in the calendar cells */
+.week-grid__date {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #555;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Calendar (prev / current / next) */
+.week-grid--header {
+  margin-bottom: 0.25rem;
+}
+
+.week-section {
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.week-section--current {
+  opacity: 1;
+  padding: 1rem;
+  border: 2px solid #4a90d9;
+  border-radius: 6px;
+}
+
+.week-section__month {
+  margin: 0 0 0.5rem;
+}
