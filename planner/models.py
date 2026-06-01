@@ -30,29 +30,10 @@ class TemplateWeek(models.Model):
         return self.name
 
 
-class RealWeek(models.Model):
-    """A concrete week on the calendar, identified by its Monday. A snapshot:
-    independent of any template once its meals are created."""
-
-    start_date = models.DateField(unique=True)
-
-    def __str__(self):
-        return f"Week of {self.start_date:%Y-%m-%d}"
-
-
-class Meal(models.Model):
-    """Shared shape of a single planned slot. Abstract: each subclass gets its
-    own standalone table"""
-
+class TemplateMeal(models.Model):
     meal_type = models.CharField(max_length=20, choices=MealType.choices)
     weekday = models.IntegerField(choices=Weekday.choices)
     recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT)
-
-    class Meta:
-        abstract = True
-
-
-class TemplateMeal(Meal):
     template = models.ForeignKey(
         TemplateWeek, on_delete=models.CASCADE, related_name="meals"
     )
@@ -72,18 +53,18 @@ class TemplateMeal(Meal):
         )
 
 
-class RealMeal(Meal):
-    week = models.ForeignKey(RealWeek, on_delete=models.CASCADE, related_name="meals")
+class CalendarMeal(models.Model):
+    meal_type = models.CharField(max_length=20, choices=MealType.choices)
+    date = models.DateField()
+    recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["week", "weekday", "meal_type"],
-                name="unique_realweek_slot",
+                fields=["date", "meal_type"],
+                name="unique_calendarmeal_slot",
             )
         ]
 
     def __str__(self):
-        return (
-            f"{self.week}: {self.get_weekday_display()} {self.get_meal_type_display()}"
-        )
+        return f"{self.date}: {self.get_meal_type_display()}"

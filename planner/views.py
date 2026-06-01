@@ -10,7 +10,7 @@ from django.views.generic import (
     TemplateView,
 )
 from recipes.models import Recipe
-from .models import TemplateWeek, TemplateMeal, RealWeek, MealType, Weekday
+from .models import TemplateWeek, TemplateMeal, MealType, Weekday, CalendarMeal
 
 
 def build_days(meals):
@@ -50,64 +50,64 @@ class TemplateWeekDetail(DetailView):
         return context
 
 
-class PlannerCalendar(TemplateView):
-    template_name = "planner/calendar.html"
+# class PlannerCalendar(TemplateView):
+#     template_name = "planner/calendar.html"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
 
-        this_monday = monday_of(datetime.date.today())
-        mondays = [this_monday + datetime.timedelta(weeks=offset) for offset in (-1, 0, 1)]
+#         this_monday = monday_of(datetime.date.today())
+#         mondays = [
+#             this_monday + datetime.timedelta(weeks=offset) for offset in (-1, 0, 1)
+#         ]
 
-        # One query for any already-materialized weeks in range; missing ones
-        # simply render as empty grids (lazy: viewing never creates RealWeeks).
-        real_weeks = {
-            week.start_date: week
-            for week in RealWeek.objects.filter(
-                start_date__in=mondays
-            ).prefetch_related("meals__recipe")
-        }
+#         # One query for any already-materialized weeks in range; missing ones
+#         # simply render as empty grids (lazy: viewing never creates RealWeeks).
+#         real_weeks = {
+#             week.start_date: week
+#             for week in RealWeek.objects.filter(
+#                 start_date__in=mondays
+#             ).prefetch_related("meals__recipe")
+#         }
 
-        # Weekday names live once at the top of the calendar, shared by every row.
-        context["weekday_labels"] = [day.label for day in Weekday]
+#         # Weekday names live once at the top of the calendar, shared by every row.
+#         context["weekday_labels"] = [day.label for day in Weekday]
 
-        weeks = []
-        for monday in mondays:
-            is_current = monday == this_monday
-            real_week = real_weeks.get(monday)
+#         weeks = []
+#         for monday in mondays:
+#             is_current = monday == this_monday
+#             real_week = real_weeks.get(monday)
 
-            # Current and upcoming weeks show meals; the past week is date-only.
-            show_meals = monday >= this_monday
-            meals = {}
-            if show_meals and real_week is not None:
-                meals = {
-                    (m.weekday, m.meal_type): m for m in real_week.meals.all()
-                }
+#             # Current and upcoming weeks show meals; the past week is date-only.
+#             show_meals = monday >= this_monday
+#             meals = {}
+#             if show_meals and real_week is not None:
+#                 meals = {(m.weekday, m.meal_type): m for m in real_week.meals.all()}
 
-            days = []
-            for offset in range(7):
-                date = monday + datetime.timedelta(days=offset)
-                weekday = offset + 1  # Monday = 1, matching Weekday choices
-                days.append(
-                    {
-                        "date": date,
-                        "lunch": meals.get((weekday, MealType.LUNCH)),
-                        "dinner": meals.get((weekday, MealType.DINNER)),
-                    }
-                )
+#             days = []
+#             for offset in range(7):
+#                 date = monday + datetime.timedelta(days=offset)
+#                 weekday = offset + 1  # Monday = 1, matching Weekday choices
+#                 days.append(
+#                     {
+#                         "date": date,
+#                         "lunch": meals.get((weekday, MealType.LUNCH)),
+#                         "dinner": meals.get((weekday, MealType.DINNER)),
+#                     }
+#                 )
 
-            weeks.append(
-                {
-                    "start_date": monday,
-                    "is_current": is_current,
-                    "show_meals": show_meals,
-                    "real_week": real_week,
-                    "days": days,
-                }
-            )
+#             weeks.append(
+#                 {
+#                     "start_date": monday,
+#                     "is_current": is_current,
+#                     "show_meals": show_meals,
+#                     "real_week": real_week,
+#                     "days": days,
+#                 }
+#             )
 
-        context["weeks"] = weeks
-        return context
+#         context["weeks"] = weeks
+#         return context
 
 
 def _meal_label(meal_type):
@@ -139,9 +139,13 @@ def templatemeal_cell(request, pk, weekday, meal_type):
     templateweek = _validate_slot(pk, weekday, meal_type)
     if templateweek is None:
         return HttpResponseNotAllowed(["GET"])
-    meal = TemplateMeal.objects.filter(
-        template=templateweek, weekday=weekday, meal_type=meal_type
-    ).select_related("recipe").first()
+    meal = (
+        TemplateMeal.objects.filter(
+            template=templateweek, weekday=weekday, meal_type=meal_type
+        )
+        .select_related("recipe")
+        .first()
+    )
     return render(
         request,
         "planner/_meal_cell.html",
@@ -184,7 +188,9 @@ def templatemeal(request, pk, weekday, meal_type):
 
     # POST: create (or replace) the meal for this slot.
     recipe_name = (request.POST.get("recipe") or "").strip()
-    recipe = Recipe.objects.filter(name__iexact=recipe_name).first() if recipe_name else None
+    recipe = (
+        Recipe.objects.filter(name__iexact=recipe_name).first() if recipe_name else None
+    )
     if recipe is None:
         context = _cell_context(templateweek, weekday, meal_type)
         context["recipes"] = Recipe.objects.order_by("name")
