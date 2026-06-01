@@ -15,10 +15,75 @@
 }
 
 .week-grid__cell {
+  position: relative;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 0.5rem;
   min-height: 3.5rem;
+}
+
+.week-grid__recipe {
+  cursor: pointer;
+}
+
+.week-grid__recipe:hover {
+  text-decoration: underline;
+  color: #4a90d9;
+}
+
+.week-grid__delete {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.25rem;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+}
+
+.week-grid__delete:hover {
+  color: #c0392b;
+}
+
+.week-grid__add {
+  background: none;
+  border: 1px dashed #ccc;
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  padding: 0.1rem 0.5rem;
+}
+
+.week-grid__add:hover {
+  color: #4a90d9;
+  border-color: #4a90d9;
+}
+
+.week-grid__form input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.3rem;
+}
+
+.week-grid__form-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.week-grid__form-actions button {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.week-grid__error {
+  color: #c0392b;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
 }
 
 .week-grid__meal-type {

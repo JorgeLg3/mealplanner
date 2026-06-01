@@ -1,0 +1,31 @@
+{# Inline add-meal form for a single TemplateWeek slot, swapped into the cell. #}
+{# Context: templateweek_pk, weekday, meal_type, meal_type_label, recipes, error (optional) #}
+<div class="week-grid__cell" id="cell-{{ weekday }}-{{ meal_type }}">
+  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+  <form class="week-grid__form"
+        hx-post="{% url 'templatemeal' templateweek_pk weekday meal_type %}"
+        hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+        hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="text"
+           name="recipe"
+           list="recipes-{{ weekday }}-{{ meal_type }}"
+           placeholder="Search recipe…"
+           autocomplete="off"
+           autofocus
+           required>
+    <datalist id="recipes-{{ weekday }}-{{ meal_type }}">
+      {% for recipe in recipes %}
+        <option value="{{ recipe.name }}"></option>
+      {% endfor %}
+    </datalist>
+    {% if error %}<p class="week-grid__error">{{ error }}</p>{% endif %}
+    <div class="week-grid__form-actions">
+      <button type="submit">Save</button>
+      <button type="button"
+              hx-get="{% url 'templatemeal_cell' templateweek_pk weekday meal_type %}"
+              hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+              hx-swap="outerHTML">Cancel</button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,25 @@
+{# A single Mon–Sun slot for a TemplateWeek (filled or empty), swappable via HTMX. #}
+{# Context: templateweek_pk, weekday, meal_type, meal_type_label, meal (TemplateMeal or None) #}
+<div class="week-grid__cell" id="cell-{{ weekday }}-{{ meal_type }}">
+  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+  {% if meal %}
+    <button type="button"
+            class="week-grid__delete"
+            aria-label="Remove meal"
+            hx-delete="{% url 'templatemeal' templateweek_pk weekday meal_type %}"
+            hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+            hx-swap="outerHTML"
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>×</button>
+    <span class="week-grid__recipe"
+          title="Click to swap"
+          hx-get="{% url 'templatemeal_form' templateweek_pk weekday meal_type %}"
+          hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+          hx-swap="outerHTML">{{ meal.recipe.name }}</span>
+  {% else %}
+    <button type="button"
+            class="week-grid__add"
+            hx-get="{% url 'templatemeal_form' templateweek_pk weekday meal_type %}"
+            hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+            hx-swap="outerHTML">+</button>
+  {% endif %}
+</div>
