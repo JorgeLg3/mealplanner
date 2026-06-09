@@ -1,0 +1,15 @@
+{# Mon–Sun grid of dates + lunch/dinner cells for one week. #}
+{# Context: days (list of {date, lunch, dinner}) #}
+<div class="week-grid">
+  {% for day in days %}
+    <div class="week-grid__date">{{ day.date|date:"j" }}</div>
+  {% endfor %}
+
+  {% for day in days %}
+    {% include "planner/_calendar_cell.html" with date=day.date meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
+  {% endfor %}
+
+  {% for day in days %}
+    {% include "planner/_calendar_cell.html" with date=day.date meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
+  {% endfor %}
+</div>

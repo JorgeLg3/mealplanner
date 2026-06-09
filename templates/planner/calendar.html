@@ -19,22 +19,10 @@
     <section class="week-section{% if week.is_current %} week-section--current{% endif %}">
       {% if week.is_current %}
         <h2 class="week-section__month">{{ week.start_date|date:"F Y" }}</h2>
+        {% include "planner/_current_week.html" with monday=week.start_date days=week.days templates=templates %}
+      {% else %}
+        {% include "planner/_week_grid.html" with days=week.days %}
       {% endif %}
-
-      <div class="week-grid">
-        {# Row of month-day numbers. #}
-        {% for day in week.days %}
-          <div class="week-grid__date">{{ day.date|date:"j" }}</div>
-        {% endfor %}
-
-        {% for day in week.days %}
-          {% include "planner/_calendar_cell.html" with date=day.date meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
-        {% endfor %}
-
-        {% for day in week.days %}
-          {% include "planner/_calendar_cell.html" with date=day.date meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
-        {% endfor %}
-      </div>
     </section>
   {% endfor %}
 {% endblock %}

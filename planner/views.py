@@ -192,6 +192,7 @@ class PlannerCalendar(TemplateView):
             )
 
         context["weeks"] = weeks
+        context["templates"] = TemplateWeek.objects.order_by("name")
         return context
 
 

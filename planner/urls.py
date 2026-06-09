@@ -9,6 +9,13 @@ from .views import (
     calendarmeal_cell,
     calendarmeal_form,
     calendarmeal,
+    week_actions,
+    week_apply_form,
+    week_save_form,
+    week_update_form,
+    week_apply_template,
+    week_save_template,
+    week_update_template,
 )
 
 urlpatterns = [
@@ -47,4 +54,11 @@ urlpatterns = [
         calendarmeal,
         name="calendarmeal",
     ),
+    path("week/actions/", week_actions, name="week_actions"),
+    path("week/apply/form/", week_apply_form, name="week_apply_form"),
+    path("week/save/form/", week_save_form, name="week_save_form"),
+    path("week/update/form/", week_update_form, name="week_update_form"),
+    path("week/apply/", week_apply_template, name="week_apply_template"),
+    path("week/save/", week_save_template, name="week_save_template"),
+    path("week/update/", week_update_template, name="week_update_template"),
 ]

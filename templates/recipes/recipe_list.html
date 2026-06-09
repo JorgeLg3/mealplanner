@@ -5,5 +5,7 @@
     <a href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a>
   {% endfor %}
 
-  <a href="{% url 'recipe_create' %}">New recipe</a>
+  <div>
+    <a href="{% url 'recipe_create' %}">New recipe</a>
+  </div>
 {% endblock %}
