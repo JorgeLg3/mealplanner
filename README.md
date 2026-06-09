@@ -1,6 +1,9 @@
 # Mealprep App
 
-This is the new I'm developing for my own use where I want to track the recipes I usually do. Organize the meal calendar of the following weeks. And auto generate the list of ingredients that I need to buy.
+This is the new I'm developing for my own use where I want to track the recipes I usually do. Organize the meal calendar of the following weeks. And auto generate the list of ingredients that I need to buy. The project is going to be divided in three apps:
+- Recipes: like a cookbook we can create recipes with ingredients and instructions
+- Planner: we can create a meal to attach a recipe to a calendar day and type of meal (lunch, dinner). We have also Week templates to organize recurring meal weekly plans
+- Todo: we can export the next X days of meals to a list of ingredients to buy. And also can add other todos
 
 ## Introduction
 This is the codebase I have developed as template repo for future Django app developements. Including basic features and configurations ready to go

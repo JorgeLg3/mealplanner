@@ -5,46 +5,63 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('planner', '0002_rename_weektemplate_templateweek'),
-        ('recipes', '0003_alter_recipeingredient_quantity_and_more'),
+        ("planner", "0002_rename_weektemplate_templateweek"),
+        ("recipes", "0003_alter_recipeingredient_quantity_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CalendarMeal',
+            name="CalendarMeal",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('meal_type', models.CharField(choices=[('lunch', 'Lunch'), ('dinner', 'Dinner')], max_length=20)),
-                ('date', models.DateField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "meal_type",
+                    models.CharField(
+                        choices=[("lunch", "Lunch"), ("dinner", "Dinner")],
+                        max_length=20,
+                    ),
+                ),
+                ("date", models.DateField()),
             ],
         ),
         migrations.RemoveConstraint(
-            model_name='realmeal',
-            name='unique_realweek_slot',
+            model_name="realmeal",
+            name="unique_realweek_slot",
         ),
         migrations.AddField(
-            model_name='calendarmeal',
-            name='recipe',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='recipes.recipe'),
+            model_name="calendarmeal",
+            name="recipe",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT, to="recipes.recipe"
+            ),
         ),
         migrations.RemoveField(
-            model_name='realmeal',
-            name='recipe',
+            model_name="realmeal",
+            name="recipe",
         ),
         migrations.RemoveField(
-            model_name='realmeal',
-            name='week',
+            model_name="realmeal",
+            name="week",
         ),
         migrations.AddConstraint(
-            model_name='calendarmeal',
-            constraint=models.UniqueConstraint(fields=('date', 'meal_type'), name='unique_calendarmeal_slot'),
+            model_name="calendarmeal",
+            constraint=models.UniqueConstraint(
+                fields=("date", "meal_type"), name="unique_calendarmeal_slot"
+            ),
         ),
         migrations.DeleteModel(
-            name='RealMeal',
+            name="RealMeal",
         ),
         migrations.DeleteModel(
-            name='RealWeek',
+            name="RealWeek",
         ),
     ]
