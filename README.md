@@ -39,7 +39,7 @@ The `release.yml` workflow will build and push the docker image to Github contai
 ```yaml
 services:
   django-app:
-    image: ghcr.io/jorgelg3/thejorgelab-blog:latest
+    image: ghcr.io/jorgelg3/mealplanner:latest
     restart: unless-stopped
     volumes:
       - ./data/db-data:/app/db-data
