@@ -13,7 +13,8 @@
          <a href="{% url 'about' %}">About</a> |
          <a href="{% url 'recipe_list' %}">Recipes</a> |
          <a href="{% url 'planner_calendar' %}">Planner</a> |
-         <a href="{% url 'templateweek_list' %}">Templates</a>
+         <a href="{% url 'templateweek_list' %}">Templates</a> |
+         <a href="{% url 'todo_list' %}">Todos</a>
       </header>
       {% if user.is_authenticated %}
         <p>Hi {{ user.username }}!</p>

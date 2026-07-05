@@ -17,9 +17,7 @@ class Todo(models.Model):
 
 
 class Subtask(models.Model):
-    todo = models.ForeignKey(
-        Todo, on_delete=models.CASCADE, related_name="subtasks"
-    )
+    todo = models.ForeignKey(Todo, on_delete=models.CASCADE, related_name="subtasks")
     name = models.CharField(max_length=200)
     due_date = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(default=False)

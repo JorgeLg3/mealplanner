@@ -5,39 +5,60 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Todo',
+            name="Todo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
-                ('description', models.TextField(blank=True)),
-                ('due_date', models.DateField(blank=True, null=True)),
-                ('is_done', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("description", models.TextField(blank=True)),
+                ("due_date", models.DateField(blank=True, null=True)),
+                ("is_done", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'ordering': ['is_done', 'due_date', '-created_at'],
+                "ordering": ["is_done", "due_date", "-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='Subtask',
+            name="Subtask",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
-                ('due_date', models.DateField(blank=True, null=True)),
-                ('is_done', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('todo', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='subtasks', to='todo.todo')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("due_date", models.DateField(blank=True, null=True)),
+                ("is_done", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "todo",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="subtasks",
+                        to="todo.todo",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['is_done', 'due_date', '-created_at'],
+                "ordering": ["is_done", "due_date", "-created_at"],
             },
         ),
     ]
