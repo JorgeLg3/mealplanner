@@ -97,6 +97,11 @@
               hx-get="{% url 'week_update_form' %}"
               hx-target="#current-week"
               hx-swap="outerHTML">Update template</button>
+      <button type="button"
+              hx-post="{% url 'week_export_shopping_list' %}"
+              hx-target="#current-week"
+              hx-swap="outerHTML"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>Export shopping list</button>
     {% endif %}
   </div>
 </div>

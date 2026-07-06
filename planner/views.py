@@ -9,7 +9,8 @@ from django.views.generic import (
     DetailView,
     TemplateView,
 )
-from recipes.models import Recipe
+from recipes.models import Recipe, RecipeIngredient
+from todo.models import Subtask, Todo
 from .models import TemplateWeek, TemplateMeal, MealType, Weekday, CalendarMeal
 
 
@@ -409,6 +410,35 @@ def week_save_template(request):
     template = TemplateWeek.objects.create(name=name)
     _copy_week_into_template(template, dates)
     return _render_current_week(request, message=f"Saved as “{template.name}”.")
+
+
+@login_required
+@require_http_methods(["POST"])
+def week_export_shopping_list(request):
+    """Export: snapshot this week's scheduled ingredients into a new
+    'Shopping list <date>' todo, one subtask per distinct ingredient."""
+    _, dates = _current_week()
+    recipe_ids = CalendarMeal.objects.filter(date__in=dates).values_list(
+        "recipe_id", flat=True
+    )
+    ingredient_names = list(
+        RecipeIngredient.objects.filter(recipe_id__in=recipe_ids)
+        .values_list("ingredient__name", flat=True)
+        .distinct()
+        .order_by("ingredient__name")
+    )
+    if not ingredient_names:
+        return _render_current_week(
+            request, error="No ingredients scheduled this week."
+        )
+    todo = Todo.objects.create(name=f"Shopping list {datetime.date.today():%Y-%m-%d}")
+    Subtask.objects.bulk_create(
+        [Subtask(todo=todo, name=name.capitalize()) for name in ingredient_names]
+    )
+    return _render_current_week(
+        request,
+        message=f"Saved “{todo.name}” with {len(ingredient_names)} items.",
+    )
 
 
 @login_required
