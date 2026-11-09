@@ -22,6 +22,15 @@ class RecipeListView(ListView):
     )
 
 
+class IngredientListView(ListView):
+    model = Ingredient
+    template_name = "recipes/ingredient_list.html"
+    # Sorted by category so the template can {% regroup %} it; uncategorized last.
+    queryset = Ingredient.objects.select_related("category").order_by(
+        F("category__name").asc(nulls_last=True), "name"
+    )
+
+
 class RecipeDetailView(DetailView):
     model = Recipe
     template_name = "recipes/recipe_detail.html"

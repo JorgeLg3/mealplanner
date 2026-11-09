@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Ingredients</h1>
+  {% regroup ingredient_list by category as category_groups %}
+  {% for group in category_groups %}
+    <section>
+      <h2>{{ group.grouper|default:"Uncategorized" }}</h2>
+      <ul>
+        {% for ingredient in group.list %}
+          <li>{{ ingredient.name }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% empty %}
+    <p>No ingredients yet.</p>
+  {% endfor %}
+
+  <div>
+    <a href="{% url 'recipe_list' %}">Back to recipes</a>
+  </div>
+{% endblock %}

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Recipe, RecipeCategory
+from .models import Ingredient, IngredientCategory, Recipe, RecipeCategory
 
 
 class RecipeListTests(TestCase):
@@ -41,3 +41,27 @@ class RecipeDetailTests(TestCase):
         recipe = Recipe.objects.create(name="Toast", description="d", servings=1)
         response = self.client.get(recipe.get_absolute_url())
         self.assertContains(response, "Category: Uncategorized")
+
+
+class IngredientListTests(TestCase):
+    def test_ingredients_grouped_by_category_with_uncategorized_last(self):
+        veg = IngredientCategory.objects.create(name="Vegetables")
+        dairy = IngredientCategory.objects.create(name="Dairy")
+        Ingredient.objects.create(name="tomato", category=veg)
+        Ingredient.objects.create(name="carrot", category=veg)
+        Ingredient.objects.create(name="milk", category=dairy)
+        Ingredient.objects.create(name="salt")
+
+        response = self.client.get(reverse("ingredient_list"))
+
+        self.assertEqual(
+            [i.name for i in response.context["ingredient_list"]],
+            ["milk", "carrot", "tomato", "salt"],
+        )
+        self.assertContains(response, "<h2>Dairy</h2>", html=True)
+        self.assertContains(response, "<h2>Vegetables</h2>", html=True)
+        self.assertContains(response, "<h2>Uncategorized</h2>", html=True)
+
+    def test_recipe_list_links_to_ingredients(self):
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(response, f'href="{reverse("ingredient_list")}"')
