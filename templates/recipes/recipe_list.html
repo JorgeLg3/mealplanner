@@ -1,8 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-  {% for recipe in recipe_list %}
-    <a href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a>
+  {% regroup recipe_list by category as category_groups %}
+  {% for group in category_groups %}
+    <section>
+      <h2>{{ group.grouper|default:"Uncategorized" }}</h2>
+      <ul>
+        {% for recipe in group.list %}
+          <li><a href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a></li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% empty %}
+    <p>No recipes yet.</p>
   {% endfor %}
 
   <div>

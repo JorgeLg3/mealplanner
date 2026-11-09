@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import F
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -15,12 +16,16 @@ from .forms import RecipeIngredientFormSet
 class RecipeListView(ListView):
     model = Recipe
     template_name = "recipes/recipe_list.html"
+    # Sorted by category so the template can {% regroup %} it; uncategorized last.
+    queryset = Recipe.objects.select_related("category").order_by(
+        F("category__name").asc(nulls_last=True), "name"
+    )
 
 
 class RecipeDetailView(DetailView):
     model = Recipe
     template_name = "recipes/recipe_detail.html"
-    queryset = Recipe.objects.prefetch_related(
+    queryset = Recipe.objects.select_related("category").prefetch_related(
         "recipeingredient_set__ingredient",
         "recipeingredient_set__unit",
     )

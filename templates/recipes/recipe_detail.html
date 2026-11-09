@@ -2,6 +2,7 @@
 
 {% block content %}
   <h1>{{ recipe.name }}</h1>
+  <p>Category: {{ recipe.category|default:"Uncategorized" }}</p>
   <p>{{ recipe.description }}</p>
   <p>Servings: {{recipe.servings}}</p>
 
