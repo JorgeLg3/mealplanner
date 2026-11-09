@@ -1,9 +1,10 @@
-{# The current-week region: grid + import/export action bar. #}
+{# One week's region: grid + import/export action bar.                     #}
 {# Every week-level endpoint returns this whole partial so a single        #}
-{# #current-week swap keeps the meals and the action bar in sync.          #}
+{# #week-<monday> swap keeps the meals and the action bar in sync.         #}
 {# Context: monday, days, action (None|"apply"|"save"|"update"),           #}
 {#          templates, message, error                                      #}
-<div id="current-week">
+{% with week_iso=monday|date:"Y-m-d" %}
+<div id="week-{{ week_iso }}">
   {% include "planner/_week_grid.html" with days=days %}
 
   <div class="week-actions">
@@ -13,8 +14,8 @@
     {% if action == "apply" %}
       {% if templates %}
         <form class="week-actions__form"
-              hx-post="{% url 'week_apply_template' %}"
-              hx-target="#current-week"
+              hx-post="{% url 'week_apply_template' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">
           {% csrf_token %}
           <label>Apply template (replaces this week)
@@ -27,22 +28,22 @@
           </label>
           <button type="submit">Apply</button>
           <button type="button"
-                  hx-get="{% url 'week_actions' %}"
-                  hx-target="#current-week"
+                  hx-get="{% url 'week_actions' week_iso %}"
+                  hx-target="#week-{{ week_iso }}"
                   hx-swap="outerHTML">Cancel</button>
         </form>
       {% else %}
         <p>No templates yet.</p>
         <button type="button"
-                hx-get="{% url 'week_actions' %}"
-                hx-target="#current-week"
+                hx-get="{% url 'week_actions' week_iso %}"
+                hx-target="#week-{{ week_iso }}"
                 hx-swap="outerHTML">Back</button>
       {% endif %}
 
     {% elif action == "save" %}
       <form class="week-actions__form"
-            hx-post="{% url 'week_save_template' %}"
-            hx-target="#current-week"
+            hx-post="{% url 'week_save_template' week_iso %}"
+            hx-target="#week-{{ week_iso }}"
             hx-swap="outerHTML">
         {% csrf_token %}
         <label>Save this week as a new template
@@ -50,16 +51,16 @@
         </label>
         <button type="submit">Save</button>
         <button type="button"
-                hx-get="{% url 'week_actions' %}"
-                hx-target="#current-week"
+                hx-get="{% url 'week_actions' week_iso %}"
+                hx-target="#week-{{ week_iso }}"
                 hx-swap="outerHTML">Cancel</button>
       </form>
 
     {% elif action == "update" %}
       {% if templates %}
         <form class="week-actions__form"
-              hx-post="{% url 'week_update_template' %}"
-              hx-target="#current-week"
+              hx-post="{% url 'week_update_template' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">
           {% csrf_token %}
           <label>Overwrite an existing template with this week
@@ -72,36 +73,37 @@
           </label>
           <button type="submit">Update</button>
           <button type="button"
-                  hx-get="{% url 'week_actions' %}"
-                  hx-target="#current-week"
+                  hx-get="{% url 'week_actions' week_iso %}"
+                  hx-target="#week-{{ week_iso }}"
                   hx-swap="outerHTML">Cancel</button>
         </form>
       {% else %}
         <p>No templates yet.</p>
         <button type="button"
-                hx-get="{% url 'week_actions' %}"
-                hx-target="#current-week"
+                hx-get="{% url 'week_actions' week_iso %}"
+                hx-target="#week-{{ week_iso }}"
                 hx-swap="outerHTML">Back</button>
       {% endif %}
 
     {% else %}
       <button type="button"
-              hx-get="{% url 'week_apply_form' %}"
-              hx-target="#current-week"
+              hx-get="{% url 'week_apply_form' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">Import template</button>
       <button type="button"
-              hx-get="{% url 'week_save_form' %}"
-              hx-target="#current-week"
+              hx-get="{% url 'week_save_form' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">Save as new template</button>
       <button type="button"
-              hx-get="{% url 'week_update_form' %}"
-              hx-target="#current-week"
+              hx-get="{% url 'week_update_form' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">Update template</button>
       <button type="button"
-              hx-post="{% url 'week_export_shopping_list' %}"
-              hx-target="#current-week"
+              hx-post="{% url 'week_export_shopping_list' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML"
               hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>Export shopping list</button>
     {% endif %}
   </div>
 </div>
+{% endwith %}

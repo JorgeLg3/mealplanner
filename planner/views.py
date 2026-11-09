@@ -1,7 +1,7 @@
 import datetime
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseNotAllowed
+from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 from django.views.generic import (
@@ -291,21 +291,30 @@ def calendarmeal(request, date, meal_type):
     )
 
 
-def _current_week():
-    """The current Mon–Sun window: its Monday plus the seven dates."""
-    monday = monday_of(datetime.date.today())
-    dates = [monday + datetime.timedelta(days=offset) for offset in range(7)]
-    return monday, dates
+def _week_dates(monday):
+    """The seven dates of the Mon–Sun week starting at ``monday``."""
+    return [monday + datetime.timedelta(days=offset) for offset in range(7)]
 
 
-def _current_week_days():
+def _parse_monday(monday_str):
+    """Parse the ISO date from the URL; 404 unless it's a Monday."""
+    try:
+        monday = datetime.date.fromisoformat(monday_str)
+    except ValueError:
+        raise Http404("Invalid week.")
+    if monday.weekday() != 0:
+        raise Http404("Weeks start on Monday.")
+    return monday
+
+
+def _week_days(monday):
     """Render-ready day dicts (date + lunch/dinner CalendarMeal) for the grid."""
-    monday, dates = _current_week()
+    dates = _week_dates(monday)
     meals_by_slot = {
         (m.date, m.meal_type): m
         for m in CalendarMeal.objects.filter(date__in=dates).select_related("recipe")
     }
-    return monday, [
+    return [
         {
             "date": date,
             "lunch": meals_by_slot.get((date, MealType.LUNCH)),
@@ -315,17 +324,16 @@ def _current_week_days():
     ]
 
 
-def _render_current_week(request, action=None, message="", error=""):
-    """Re-render the whole current-week region (grid + action bar). Every
-    import/export endpoint returns this so a single #current-week swap keeps
+def _render_week(request, monday, action=None, message="", error=""):
+    """Re-render one week's whole region (grid + action bar). Every
+    import/export endpoint returns this so a single #week-<monday> swap keeps
     the meals and the action bar in sync."""
-    monday, days = _current_week_days()
     return render(
         request,
-        "planner/_current_week.html",
+        "planner/_week.html",
         {
             "monday": monday,
-            "days": days,
+            "days": _week_days(monday),
             "action": action,
             "message": message,
             "error": error,
@@ -336,27 +344,31 @@ def _render_current_week(request, action=None, message="", error=""):
 
 @login_required
 @require_http_methods(["GET"])
-def week_actions(request):
+def week_actions(request, monday):
     """Reset the action bar to its buttons (used by each form's Cancel)."""
-    return _render_current_week(request)
+    monday = _parse_monday(monday)
+    return _render_week(request, monday)
 
 
 @login_required
 @require_http_methods(["GET"])
-def week_apply_form(request):
-    return _render_current_week(request, action="apply")
+def week_apply_form(request, monday):
+    monday = _parse_monday(monday)
+    return _render_week(request, monday, action="apply")
 
 
 @login_required
 @require_http_methods(["GET"])
-def week_save_form(request):
-    return _render_current_week(request, action="save")
+def week_save_form(request, monday):
+    monday = _parse_monday(monday)
+    return _render_week(request, monday, action="save")
 
 
 @login_required
 @require_http_methods(["GET"])
-def week_update_form(request):
-    return _render_current_week(request, action="update")
+def week_update_form(request, monday):
+    monday = _parse_monday(monday)
+    return _render_week(request, monday, action="update")
 
 
 def _copy_week_into_template(template, dates):
@@ -379,12 +391,13 @@ def _copy_week_into_template(template, dates):
 
 @login_required
 @require_http_methods(["POST"])
-def week_apply_template(request):
-    """Import: replace the current week's meals with a template's meals."""
+def week_apply_template(request, monday):
+    """Import: replace this week's meals with a template's meals."""
+    monday = _parse_monday(monday)
     template = TemplateWeek.objects.filter(pk=request.POST.get("template") or 0).first()
     if template is None:
-        return _render_current_week(request, action="apply", error="Pick a template.")
-    monday, dates = _current_week()
+        return _render_week(request, monday, action="apply", error="Pick a template.")
+    dates = _week_dates(monday)
     CalendarMeal.objects.filter(date__in=dates).delete()
     CalendarMeal.objects.bulk_create(
         [
@@ -396,28 +409,30 @@ def week_apply_template(request):
             for meal in template.meals.select_related("recipe")
         ]
     )
-    return _render_current_week(request, message=f"Applied “{template.name}”.")
+    return _render_week(request, monday, message=f"Applied “{template.name}”.")
 
 
 @login_required
 @require_http_methods(["POST"])
-def week_save_template(request):
-    """Export: snapshot the current week into a brand-new template."""
+def week_save_template(request, monday):
+    """Export: snapshot this week into a brand-new template."""
+    monday = _parse_monday(monday)
     name = (request.POST.get("name") or "").strip()
     if not name:
-        return _render_current_week(request, action="save", error="Name is required.")
-    _, dates = _current_week()
+        return _render_week(request, monday, action="save", error="Name is required.")
+    dates = _week_dates(monday)
     template = TemplateWeek.objects.create(name=name)
     _copy_week_into_template(template, dates)
-    return _render_current_week(request, message=f"Saved as “{template.name}”.")
+    return _render_week(request, monday, message=f"Saved as “{template.name}”.")
 
 
 @login_required
 @require_http_methods(["POST"])
-def week_export_shopping_list(request):
+def week_export_shopping_list(request, monday):
     """Export: snapshot this week's scheduled ingredients into a new
-    'Shopping list <date>' todo, one subtask per distinct ingredient."""
-    _, dates = _current_week()
+    'Shopping list week of <monday>' todo, one subtask per distinct ingredient."""
+    monday = _parse_monday(monday)
+    dates = _week_dates(monday)
     recipe_ids = CalendarMeal.objects.filter(date__in=dates).values_list(
         "recipe_id", flat=True
     )
@@ -428,26 +443,28 @@ def week_export_shopping_list(request):
         .order_by("ingredient__name")
     )
     if not ingredient_names:
-        return _render_current_week(
-            request, error="No ingredients scheduled this week."
+        return _render_week(
+            request, monday, error="No ingredients scheduled this week."
         )
-    todo = Todo.objects.create(name=f"Shopping list {datetime.date.today():%Y-%m-%d}")
+    todo = Todo.objects.create(name=f"Shopping list week of {monday:%Y-%m-%d}")
     Subtask.objects.bulk_create(
         [Subtask(todo=todo, name=name.capitalize()) for name in ingredient_names]
     )
-    return _render_current_week(
+    return _render_week(
         request,
+        monday,
         message=f"Saved “{todo.name}” with {len(ingredient_names)} items.",
     )
 
 
 @login_required
 @require_http_methods(["POST"])
-def week_update_template(request):
-    """Export: overwrite an existing template with the current week's meals."""
+def week_update_template(request, monday):
+    """Export: overwrite an existing template with this week's meals."""
+    monday = _parse_monday(monday)
     template = TemplateWeek.objects.filter(pk=request.POST.get("template") or 0).first()
     if template is None:
-        return _render_current_week(request, action="update", error="Pick a template.")
-    _, dates = _current_week()
+        return _render_week(request, monday, action="update", error="Pick a template.")
+    dates = _week_dates(monday)
     _copy_week_into_template(template, dates)
-    return _render_current_week(request, message=f"Updated “{template.name}”.")
+    return _render_week(request, monday, message=f"Updated “{template.name}”.")

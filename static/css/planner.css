@@ -128,7 +128,7 @@
   margin: 0 0 0.5rem;
 }
 
-/* Import / export action bar under the current week */
+/* Import / export action bar under each week */
 .week-actions {
   display: flex;
   flex-wrap: wrap;

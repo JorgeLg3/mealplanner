@@ -19,10 +19,8 @@
     <section class="week-section{% if week.is_current %} week-section--current{% endif %}">
       {% if week.is_current %}
         <h2 class="week-section__month">{{ week.start_date|date:"F Y" }}</h2>
-        {% include "planner/_current_week.html" with monday=week.start_date days=week.days templates=templates %}
-      {% else %}
-        {% include "planner/_week_grid.html" with days=week.days %}
       {% endif %}
+      {% include "planner/_week.html" with monday=week.start_date days=week.days templates=templates %}
     </section>
   {% endfor %}
 {% endblock %}

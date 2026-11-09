@@ -7,7 +7,7 @@ from django.urls import reverse
 from recipes.models import Ingredient, Recipe, RecipeIngredient
 from todo.models import Todo
 
-from .models import CalendarMeal, MealType
+from .models import CalendarMeal, MealType, TemplateMeal, TemplateWeek, Weekday
 
 
 class ExportShoppingListTests(TestCase):
@@ -41,7 +41,9 @@ class ExportShoppingListTests(TestCase):
             recipe=salad,
         )
 
-        response = self.client.post(reverse("week_export_shopping_list"))
+        response = self.client.post(
+            reverse("week_export_shopping_list", args=[self.monday.isoformat()])
+        )
         self.assertEqual(response.status_code, 200)
 
         todo = Todo.objects.get()
@@ -58,7 +60,98 @@ class ExportShoppingListTests(TestCase):
             recipe=recipe,
         )
 
-        self.client.post(reverse("week_export_shopping_list"))
+        self.client.post(
+            reverse("week_export_shopping_list", args=[self.monday.isoformat()])
+        )
 
         # Nothing scheduled this week -> no todo created.
         self.assertFalse(Todo.objects.exists())
+
+    def test_export_next_week_uses_next_weeks_meals(self):
+        next_monday = self.monday + datetime.timedelta(days=7)
+        recipe = self._recipe_with_ingredients("NextWeek", ["Onion"])
+        CalendarMeal.objects.create(
+            date=next_monday, meal_type=MealType.LUNCH, recipe=recipe
+        )
+
+        self.client.post(
+            reverse("week_export_shopping_list", args=[next_monday.isoformat()])
+        )
+
+        todo = Todo.objects.get()
+        self.assertEqual(todo.name, f"Shopping list week of {next_monday:%Y-%m-%d}")
+        self.assertEqual(list(todo.subtasks.values_list("name", flat=True)), ["Onion"])
+
+
+class WeekActionsTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        today = datetime.date.today()
+        self.monday = today - datetime.timedelta(days=today.weekday())
+        self.next_monday = self.monday + datetime.timedelta(days=7)
+        self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+
+    def test_apply_template_to_next_week_leaves_current_week_alone(self):
+        current_recipe = Recipe.objects.create(name="Soup", description="d", servings=2)
+        CalendarMeal.objects.create(
+            date=self.monday, meal_type=MealType.LUNCH, recipe=current_recipe
+        )
+        template = TemplateWeek.objects.create(name="Usual")
+        TemplateMeal.objects.create(
+            template=template,
+            weekday=Weekday.TUESDAY,
+            meal_type=MealType.DINNER,
+            recipe=self.recipe,
+        )
+
+        response = self.client.post(
+            reverse("week_apply_template", args=[self.next_monday.isoformat()]),
+            {"template": template.pk},
+        )
+
+        self.assertContains(response, f'id="week-{self.next_monday.isoformat()}"')
+        self.assertTrue(
+            CalendarMeal.objects.filter(
+                date=self.next_monday + datetime.timedelta(days=1),
+                meal_type=MealType.DINNER,
+                recipe=self.recipe,
+            ).exists()
+        )
+        # The current week's meal is untouched.
+        self.assertTrue(
+            CalendarMeal.objects.filter(
+                date=self.monday, recipe=current_recipe
+            ).exists()
+        )
+
+    def test_save_next_week_as_template(self):
+        CalendarMeal.objects.create(
+            date=self.next_monday + datetime.timedelta(days=2),
+            meal_type=MealType.LUNCH,
+            recipe=self.recipe,
+        )
+
+        self.client.post(
+            reverse("week_save_template", args=[self.next_monday.isoformat()]),
+            {"name": "Next"},
+        )
+
+        meal = TemplateWeek.objects.get(name="Next").meals.get()
+        self.assertEqual(meal.weekday, Weekday.WEDNESDAY)
+        self.assertEqual(meal.recipe, self.recipe)
+
+    def test_rejects_dates_that_are_not_mondays(self):
+        tuesday = self.monday + datetime.timedelta(days=1)
+        for bad in [tuesday.isoformat(), "not-a-date"]:
+            response = self.client.get(reverse("week_actions", args=[bad]))
+            self.assertEqual(response.status_code, 404)
+
+    def test_calendar_shows_action_bar_for_both_weeks(self):
+        response = self.client.get(reverse("planner_calendar"))
+        for monday in (self.monday, self.next_monday):
+            self.assertContains(
+                response, reverse("week_apply_form", args=[monday.isoformat()])
+            )
