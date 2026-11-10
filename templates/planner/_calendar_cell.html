@@ -10,11 +10,14 @@
             hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
             hx-swap="outerHTML"
             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>×</button>
-    <span class="week-grid__recipe"
-          title="Click to swap"
-          hx-get="{% url 'calendarmeal_form' date meal_type %}"
-          hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
-          hx-swap="outerHTML">{{ meal.recipe.name }}</span>
+    <button type="button"
+            class="week-grid__swap"
+            aria-label="Swap meal"
+            title="Swap meal"
+            hx-get="{% url 'calendarmeal_form' date meal_type %}"
+            hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
+            hx-swap="outerHTML">✎</button>
+    <a class="week-grid__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
   {% else %}
     <button type="button"
             class="week-grid__add"

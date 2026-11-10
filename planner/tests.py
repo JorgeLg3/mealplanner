@@ -155,3 +155,45 @@ class WeekActionsTests(TestCase):
             self.assertContains(
                 response, reverse("week_apply_form", args=[monday.isoformat()])
             )
+
+
+class MealCellTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+
+    def test_calendar_cell_links_to_recipe_and_has_swap_button(self):
+        date = datetime.date.today()
+        CalendarMeal.objects.create(
+            date=date, meal_type=MealType.LUNCH, recipe=self.recipe
+        )
+
+        response = self.client.get(
+            reverse("calendarmeal_cell", args=[date.isoformat(), MealType.LUNCH])
+        )
+
+        self.assertContains(response, f'href="{self.recipe.get_absolute_url()}"')
+        self.assertContains(
+            response,
+            f'hx-get="{reverse("calendarmeal_form", args=[date.isoformat(), MealType.LUNCH])}"',
+        )
+
+    def test_template_cell_links_to_recipe_and_has_swap_button(self):
+        template = TemplateWeek.objects.create(name="Usual")
+        TemplateMeal.objects.create(
+            template=template,
+            weekday=Weekday.MONDAY,
+            meal_type=MealType.DINNER,
+            recipe=self.recipe,
+        )
+        args = [template.pk, Weekday.MONDAY, MealType.DINNER]
+
+        response = self.client.get(reverse("templatemeal_cell", args=args))
+
+        self.assertContains(response, f'href="{self.recipe.get_absolute_url()}"')
+        self.assertContains(
+            response, f'hx-get="{reverse("templatemeal_form", args=args)}"'
+        )

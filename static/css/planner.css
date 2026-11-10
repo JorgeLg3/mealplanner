@@ -23,7 +23,11 @@
 }
 
 .week-grid__recipe {
-  cursor: pointer;
+  display: block;
+  /* Keep the name clear of the swap / remove buttons in the corner. */
+  padding-right: 2.5rem;
+  color: inherit;
+  text-decoration: none;
 }
 
 .week-grid__recipe:hover {
@@ -46,6 +50,23 @@
 
 .week-grid__delete:hover {
   color: #c0392b;
+}
+
+.week-grid__swap {
+  position: absolute;
+  top: 0.15rem;
+  right: 1.4rem;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+}
+
+.week-grid__swap:hover {
+  color: #4a90d9;
 }
 
 .week-grid__add {
