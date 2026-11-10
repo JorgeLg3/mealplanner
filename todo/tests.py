@@ -20,7 +20,7 @@ class ToggleTests(TestCase):
         response = self.client.post(url)
         self.todo.refresh_from_db()
         self.assertTrue(self.todo.is_done)
-        self.assertContains(response, 'class="todo todo--done"')
+        self.assertContains(response, "todo todo--done")
 
         self.client.post(url)
         self.todo.refresh_from_db()
@@ -65,15 +65,31 @@ class ToggleTests(TestCase):
         self.assertTrue(self.subtask.is_done)
         self.assertFalse(self.todo.is_done)
 
-    def test_done_todos_listed_after_open_ones(self):
+    def test_toggle_returns_only_that_todo_greyed_out(self):
         self.client.force_login(self.user)
         Todo.objects.create(name="Laundry")
 
         response = self.client.post(reverse("todo_toggle", args=[self.todo.pk]))
 
-        self.assertEqual(
-            [t.name for t in response.context["todos"]], ["Laundry", "Groceries"]
-        )
+        self.assertContains(response, f'id="todo-{self.todo.pk}"')
+        self.assertContains(response, "todo todo--done")
+        self.assertNotContains(response, "Laundry")
+
+    def test_subtask_toggle_rerenders_parent_todo(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("subtask_toggle", args=[self.subtask.pk]))
+
+        self.assertContains(response, f'id="todo-{self.todo.pk}"')
+        self.assertContains(response, "Milk")
+
+    def test_list_hides_done_todos(self):
+        Todo.objects.create(name="Laundry", is_done=True)
+
+        response = self.client.get(reverse("todo_list"))
+
+        self.assertEqual([t.name for t in response.context["todos"]], ["Groceries"])
+        self.assertNotContains(response, "Laundry")
 
     def test_toggle_requires_login(self):
         response = self.client.post(reverse("todo_toggle", args=[self.todo.pk]))
