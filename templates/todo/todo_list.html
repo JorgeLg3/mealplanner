@@ -1,26 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/todo.css' %}">
+{% endblock %}
 
 {% block content %}
   <h1>Todos</h1>
-  <ul>
-    {% for todo in todos %}
-      <li>
-        {% if todo.is_done %}✓{% endif %} {{ todo.name }}
-        {% if todo.due_date %} — due {{ todo.due_date }}{% endif %}
-        {% if todo.description %}<p>{{ todo.description }}</p>{% endif %}
-        {% if todo.subtasks.all %}
-          <ul>
-            {% for subtask in todo.subtasks.all %}
-              <li>
-                {% if subtask.is_done %}✓{% endif %} {{ subtask.name }}
-                {% if subtask.due_date %} — due {{ subtask.due_date }}{% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-      </li>
-    {% empty %}
-      <li>No todos yet.</li>
-    {% endfor %}
-  </ul>
+  {% include "todo/_todo_list.html" %}
 {% endblock %}

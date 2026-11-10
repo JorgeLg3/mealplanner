@@ -1,0 +1,41 @@
+.todo-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.todo-list--subtasks {
+  padding-left: 1.75rem;
+}
+
+.todo {
+  margin: 0.25rem 0;
+}
+
+.todo__check {
+  cursor: pointer;
+}
+
+.todo__check input[disabled] {
+  cursor: default;
+}
+
+.todo__due,
+.todo__description {
+  color: #666;
+}
+
+.todo__description {
+  margin: 0.15rem 0 0 1.75rem;
+}
+
+/* Done items: struck through and muted. Applies to the item's own row
+   only, so a done subtask doesn't strike its open siblings. */
+.todo--done > .todo__check .todo__name,
+.todo--done > .todo__due {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.todo--done > .todo__description {
+  color: #aaa;
+}

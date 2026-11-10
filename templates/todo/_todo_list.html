@@ -1,0 +1,46 @@
+{# The whole todo list. Toggle endpoints return this partial so the list   #}
+{# re-sorts (done items sink below open ones) in a single #todo-list swap. #}
+{# Context: todos #}
+<ul id="todo-list" class="todo-list" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% for todo in todos %}
+    <li class="todo{% if todo.is_done %} todo--done{% endif %}">
+      <label class="todo__check">
+        <input type="checkbox"
+               {% if todo.is_done %}checked{% endif %}
+               {% if user.is_authenticated %}
+                 hx-post="{% url 'todo_toggle' todo.pk %}"
+                 hx-target="#todo-list"
+                 hx-swap="outerHTML"
+               {% else %}
+                 disabled
+               {% endif %}>
+        <span class="todo__name">{{ todo.name }}</span>
+      </label>
+      {% if todo.due_date %}<span class="todo__due">— due {{ todo.due_date }}</span>{% endif %}
+      {% if todo.description %}<p class="todo__description">{{ todo.description }}</p>{% endif %}
+      {% if todo.subtasks.all %}
+        <ul class="todo-list todo-list--subtasks">
+          {% for subtask in todo.subtasks.all %}
+            <li class="todo{% if subtask.is_done %} todo--done{% endif %}">
+              <label class="todo__check">
+                <input type="checkbox"
+                       {% if subtask.is_done %}checked{% endif %}
+                       {% if user.is_authenticated %}
+                         hx-post="{% url 'subtask_toggle' subtask.pk %}"
+                         hx-target="#todo-list"
+                         hx-swap="outerHTML"
+                       {% else %}
+                         disabled
+                       {% endif %}>
+                <span class="todo__name">{{ subtask.name }}</span>
+              </label>
+              {% if subtask.due_date %}<span class="todo__due">— due {{ subtask.due_date }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>No todos yet.</li>
+  {% endfor %}
+</ul>
