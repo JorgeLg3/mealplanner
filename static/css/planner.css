@@ -223,3 +223,26 @@
   justify-content: flex-end;
   margin-top: 1rem;
 }
+
+/* Template list: one collapsible read-only preview per template. */
+.template-preview {
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 0;
+}
+
+.template-preview summary {
+  cursor: pointer;
+}
+
+.template-preview__name {
+  font-weight: bold;
+}
+
+.template-preview__count,
+.template-preview__description {
+  color: #666;
+}
+
+.template-preview .week-grid {
+  margin-bottom: 0.5rem;
+}

@@ -309,3 +309,44 @@ class MealCellTests(TestCase):
         self.assertContains(
             response, f'hx-get="{reverse("templatemeal_form", args=args)}"'
         )
+
+
+class TemplateWeekListTests(TestCase):
+    def test_list_previews_each_template_read_only(self):
+        recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+        template = TemplateWeek.objects.create(name="Usual")
+        TemplateMeal.objects.create(
+            template=template,
+            weekday=Weekday.WEDNESDAY,
+            meal_type=MealType.DINNER,
+            recipe=recipe,
+        )
+        TemplateWeek.objects.create(name="Empty")
+
+        response = self.client.get(reverse("templateweek_list"))
+
+        self.assertContains(response, "<details", count=2)
+        self.assertContains(response, "1/14 meals")
+        self.assertContains(response, "0/14 meals")
+        self.assertContains(response, f'href="{recipe.get_absolute_url()}"')
+        self.assertContains(
+            response, f'href="{reverse("templateweek_detail", args=[template.pk])}"'
+        )
+        # Read-only: no swap/remove/add controls in the preview.
+        self.assertNotContains(response, "hx-get")
+        self.assertNotContains(response, "hx-delete")
+
+    def test_list_uses_constant_queries(self):
+        recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+        for name in ["A", "B", "C"]:
+            template = TemplateWeek.objects.create(name=name)
+            TemplateMeal.objects.create(
+                template=template,
+                weekday=Weekday.MONDAY,
+                meal_type=MealType.LUNCH,
+                recipe=recipe,
+            )
+
+        # Templates, their meals, and the meals' recipes.
+        with self.assertNumQueries(3):
+            self.client.get(reverse("templateweek_list"))

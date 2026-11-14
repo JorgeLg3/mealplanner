@@ -39,6 +39,18 @@ def monday_of(date):
 class TemplateWeekList(ListView):
     model = TemplateWeek
     template_name = "planner/templateweek_list.html"
+    queryset = TemplateWeek.objects.prefetch_related("meals__recipe")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Each template carries its own grid for the collapsible preview.
+        context["templates"] = [
+            {"template": template, "days": build_days(meals), "meal_count": len(meals)}
+            for template in context["templateweek_list"]
+            for meals in [list(template.meals.all())]
+        ]
+        context["slot_count"] = len(Weekday) * len(MealType)
+        return context
 
 
 class TemplateWeekDetail(DetailView):

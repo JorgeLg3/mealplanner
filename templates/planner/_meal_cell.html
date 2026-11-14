@@ -1,5 +1,14 @@
 {# A single Mon–Sun slot for a TemplateWeek (filled or empty), swappable via HTMX. #}
 {# Context: templateweek_pk, weekday, meal_type, meal_type_label, meal (TemplateMeal or None) #}
+{#          readonly (optional): render without swap/remove/add controls or the HTMX id #}
+{% if readonly %}
+<div class="week-grid__cell">
+  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+  {% if meal %}
+    <a class="week-grid__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+  {% endif %}
+</div>
+{% else %}
 <div class="week-grid__cell" id="cell-{{ weekday }}-{{ meal_type }}">
   <span class="week-grid__meal-type">{{ meal_type_label }}</span>
   {% if meal %}
@@ -26,3 +35,4 @@
             hx-swap="outerHTML">+</button>
   {% endif %}
 </div>
+{% endif %}
