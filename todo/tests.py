@@ -3,8 +3,10 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Subtask, Todo
+from .views import DONE_PAGE_SIZE
 
 
 class ToggleTests(TestCase):
@@ -90,7 +92,8 @@ class ToggleTests(TestCase):
 
         response = self.client.get(reverse("todo_list"))
 
-        self.assertEqual([t.name for t in response.context["todos"]], ["Groceries"])
+        names = [t.name for g in response.context["groups"] for t in g["todos"]]
+        self.assertEqual(names, ["Groceries"])
         self.assertNotContains(response, "Laundry")
 
     def test_toggle_requires_login(self):
@@ -133,9 +136,7 @@ class TodoCrudTests(TestCase):
         self.assertEqual(todo.due_date, datetime.date(2030, 1, 5))
         self.assertEqual(todo.description, "Kitchen")
         self.assertNotContains(response, "<dialog")
-        self.assertContains(
-            response, 'id="todo-list" class="todo-list" hx-swap-oob="true"'
-        )
+        self.assertContains(response, 'id="todo-list" hx-swap-oob="true"')
         self.assertContains(response, "Fix tap")
 
     def test_create_invalid_keeps_dialog_with_errors(self):
@@ -266,3 +267,115 @@ class TodoPermissionTests(TestCase):
         self.assertNotContains(response, reverse("todo_create"))
         self.assertNotContains(response, reverse("todo_edit", args=[self.todo.pk]))
         self.assertNotContains(response, "Add subtask")
+
+
+class GroupingTests(TestCase):
+    def _groups(self):
+        response = self.client.get(reverse("todo_list"))
+        return {
+            g["key"]: [t.name for t in g["todos"]] for g in response.context["groups"]
+        }
+
+    def test_open_todos_grouped_by_due_date(self):
+        today = datetime.date.today()
+        sunday = today + datetime.timedelta(days=6 - today.weekday())
+        Todo.objects.create(name="Late", due_date=today - datetime.timedelta(days=1))
+        Todo.objects.create(name="Today", due_date=today)
+        Todo.objects.create(name="Sunday", due_date=sunday)
+        Todo.objects.create(name="Next week", due_date=sunday + datetime.timedelta(1))
+        Todo.objects.create(name="Someday")
+
+        self.assertEqual(
+            self._groups(),
+            {
+                "overdue": ["Late"],
+                "week": ["Today", "Sunday"],
+                "later": ["Next week"],
+                "none": ["Someday"],
+            },
+        )
+
+    def test_empty_groups_hidden_and_later_collapsed(self):
+        Todo.objects.create(
+            name="Far", due_date=datetime.date.today() + datetime.timedelta(days=30)
+        )
+        response = self.client.get(reverse("todo_list"))
+        self.assertEqual([g["key"] for g in response.context["groups"]], ["later"])
+        self.assertContains(response, '<details class="todo-group todo-group--later">')
+
+    def test_done_todos_not_grouped(self):
+        Todo.objects.create(name="Finished", is_done=True)
+        self.assertEqual(self._groups(), {})
+
+    def test_list_links_to_done_page(self):
+        response = self.client.get(reverse("todo_list"))
+        self.assertContains(response, f'href="{reverse("todo_done")}"')
+
+
+class DonePageTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+
+    def test_toggle_sets_and_clears_completed_at(self):
+        todo = Todo.objects.create(name="Bins")
+        url = reverse("todo_toggle", args=[todo.pk])
+
+        self.client.post(url)
+        todo.refresh_from_db()
+        self.assertIsNotNone(todo.completed_at)
+
+        self.client.post(url)
+        todo.refresh_from_db()
+        self.assertIsNone(todo.completed_at)
+
+    def test_done_page_lists_most_recently_completed_first(self):
+        now = timezone.now()
+        Todo.objects.create(name="Open")
+        Todo.objects.create(
+            name="Old", is_done=True, completed_at=now - datetime.timedelta(days=2)
+        )
+        Todo.objects.create(name="Recent", is_done=True, completed_at=now)
+        Todo.objects.create(name="Legacy", is_done=True)  # done before the field
+
+        response = self.client.get(reverse("todo_done"))
+
+        self.assertEqual(
+            [t.name for t in response.context["page"]], ["Recent", "Old", "Legacy"]
+        )
+
+    def test_done_page_is_paginated(self):
+        Todo.objects.bulk_create(
+            [Todo(name=f"T{i}", is_done=True) for i in range(DONE_PAGE_SIZE + 1)]
+        )
+        first = self.client.get(reverse("todo_done"))
+        second = self.client.get(reverse("todo_done"), {"page": 2})
+        self.assertEqual(len(first.context["page"]), DONE_PAGE_SIZE)
+        self.assertEqual(len(second.context["page"]), 1)
+        self.assertContains(first, "?page=2")
+
+
+class EditRegroupTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        self.todo = Todo.objects.create(name="Bins")
+
+    def test_changing_due_date_reloads_page(self):
+        response = self.client.post(
+            reverse("todo_edit", args=[self.todo.pk]),
+            {"name": "Bins", "description": "", "due_date": "2030-01-01"},
+        )
+        self.assertEqual(response["HX-Refresh"], "true")
+
+    def test_other_edits_swap_row_in_place(self):
+        response = self.client.post(
+            reverse("todo_edit", args=[self.todo.pk]),
+            {"name": "Recycling", "description": "", "due_date": ""},
+        )
+        self.assertNotIn("HX-Refresh", response)
+        self.assertContains(response, f'id="todo-{self.todo.pk}"')

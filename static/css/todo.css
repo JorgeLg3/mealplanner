@@ -8,7 +8,7 @@
 }
 
 /* Top-level rows: collapsible, like the template previews. */
-.todo-list > .todo {
+.todo-list:not(.todo-list--subtasks) > .todo {
   border-bottom: 1px solid #eee;
   padding: 0.35rem 0;
 }
@@ -139,4 +139,38 @@
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.todos__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Due-date groups on the open list. */
+.todo-group {
+  margin-bottom: 1rem;
+}
+
+.todo-group__title {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.todo-group__count {
+  color: #999;
+  font-weight: normal;
+  font-size: 0.9rem;
+}
+
+.todo-group--overdue > .todo-group__title {
+  color: #c0392b;
+}
+
+.todos__pagination {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
 }

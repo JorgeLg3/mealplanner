@@ -7,6 +7,7 @@ from .views import (
     subtask_toggle,
     todo_create,
     todo_delete,
+    todo_done,
     todo_edit,
     todo_list,
     todo_row,
@@ -15,6 +16,7 @@ from .views import (
 
 urlpatterns = [
     path("", todo_list, name="todo_list"),
+    path("done/", todo_done, name="todo_done"),
     path("create/", todo_create, name="todo_create"),
     path("<int:pk>/", todo_row, name="todo_row"),
     path("<int:pk>/edit/", todo_edit, name="todo_edit"),

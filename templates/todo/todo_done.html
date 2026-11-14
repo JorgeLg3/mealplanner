@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/todo.css' %}">
+{% endblock %}
+
+{% block content %}
+  {# Same rows as the open list; unticking one reopens it (it leaves this page on reload). #}
+  <div class="todos" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <h1>Done</h1>
+    <div class="todos__toolbar">
+      <a href="{% url 'todo_list' %}">Back to todos</a>
+    </div>
+
+    <ul class="todo-list">
+      {% for todo in page %}
+        {% include "todo/_todo.html" with open=False oob=False %}
+      {% empty %}
+        <li>Nothing done yet.</li>
+      {% endfor %}
+    </ul>
+
+    {% if page.has_other_pages %}
+      <nav class="todos__pagination">
+        {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Newer</a>{% endif %}
+        <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older</a>{% endif %}
+      </nav>
+    {% endif %}
+
+    <div id="todo-dialog"></div>
+  </div>
+{% endblock %}

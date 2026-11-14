@@ -1,9 +1,17 @@
-{# The list of open todos; each row is its own swappable partial. #}
-{# Context: todos, oob (optional: out-of-band swap after creating a todo) #}
-<ul id="todo-list" class="todo-list"{% if oob %} hx-swap-oob="true"{% endif %}>
-  {% for todo in todos %}
-    {% include "todo/_todo.html" with open=False oob=False %}
+{# Open todos grouped by due date; each row is its own swappable partial. #}
+{# Context: groups (list of {key, label, open, todos}),                   #}
+{#          oob (optional: out-of-band swap after creating a todo)        #}
+<div id="todo-list"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% for group in groups %}
+    <details class="todo-group todo-group--{{ group.key }}"{% if group.open %} open{% endif %}>
+      <summary class="todo-group__title">{{ group.label }} <span class="todo-group__count">{{ group.todos|length }}</span></summary>
+      <ul class="todo-list">
+        {% for todo in group.todos %}
+          {% include "todo/_todo.html" with open=False oob=False %}
+        {% endfor %}
+      </ul>
+    </details>
   {% empty %}
-    <li>No todos yet.</li>
+    <p>Nothing to do.</p>
   {% endfor %}
-</ul>
+</div>

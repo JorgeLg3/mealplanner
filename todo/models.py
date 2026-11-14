@@ -8,6 +8,8 @@ class Todo(models.Model):
     description = models.TextField(blank=True)
     due_date = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(default=False)
+    # Set when ticked, cleared when reopened; orders the "done" page.
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
