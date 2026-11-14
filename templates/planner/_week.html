@@ -1,15 +1,17 @@
 {# One week's region: grid + import/export action bar.                     #}
 {# Every week-level endpoint returns this whole partial so a single        #}
 {# #week-<monday> swap keeps the meals and the action bar in sync.         #}
-{# Context: monday, days, action (None|"apply"|"save"|"update"),           #}
+{# Context: monday, days, action (None|"apply"|"save"|"update"|"shopping"),#}
 {#          templates, message, error                                      #}
+{#          + for "shopping": items, selected_ids, list_name, due_date     #}
 {% with week_iso=monday|date:"Y-m-d" %}
 <div id="week-{{ week_iso }}">
   {% include "planner/_week_grid.html" with days=days %}
 
   <div class="week-actions">
     {% if message %}<p class="week-actions__message">{{ message }}</p>{% endif %}
-    {% if error %}<p class="week-actions__error">{{ error }}</p>{% endif %}
+    {# The shopping dialog shows its own error; the backdrop would hide this one. #}
+    {% if error and action != "shopping" %}<p class="week-actions__error">{{ error }}</p>{% endif %}
 
     {% if action == "apply" %}
       {% if templates %}
@@ -85,6 +87,50 @@
                 hx-swap="outerHTML">Back</button>
       {% endif %}
 
+    {% elif action == "shopping" %}
+      {# Modal preview. Confirm/Cancel re-render the whole week region, which #}
+      {# removes the dialog; Esc just closes it until the next re-render.      #}
+      <dialog class="shopping-dialog" id="shopping-dialog-{{ week_iso }}">
+        <form class="shopping-dialog__form"
+              hx-post="{% url 'week_export_shopping_list' week_iso %}"
+              hx-target="#week-{{ week_iso }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <h2>Export shopping list</h2>
+          {% if error %}<p class="week-actions__error">{{ error }}</p>{% endif %}
+
+          <label>Name
+            <input type="text" name="name" value="{{ list_name }}" required>
+          </label>
+          <label>Due date
+            <input type="date" name="due_date" value="{{ due_date }}">
+          </label>
+
+          {% regroup items by category as category_groups %}
+          {% for group in category_groups %}
+            <fieldset class="shopping-dialog__group">
+              <legend>{{ group.grouper|default:"Uncategorized" }}</legend>
+              {% for item in group.list %}
+                <label class="shopping-dialog__item">
+                  <input type="checkbox" name="ingredient" value="{{ item.id }}"
+                         {% if item.id in selected_ids %}checked{% endif %}>
+                  {{ item.label }}
+                </label>
+              {% endfor %}
+            </fieldset>
+          {% endfor %}
+
+          <div class="shopping-dialog__actions">
+            <button type="submit">Add to todos</button>
+            <button type="button"
+                    hx-get="{% url 'week_actions' week_iso %}"
+                    hx-target="#week-{{ week_iso }}"
+                    hx-swap="outerHTML">Cancel</button>
+          </div>
+        </form>
+      </dialog>
+      <script>document.getElementById("shopping-dialog-{{ week_iso }}").showModal();</script>
+
     {% else %}
       <button type="button"
               hx-get="{% url 'week_apply_form' week_iso %}"
@@ -99,10 +145,9 @@
               hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">Update template</button>
       <button type="button"
-              hx-post="{% url 'week_export_shopping_list' week_iso %}"
+              hx-get="{% url 'week_shopping_form' week_iso %}"
               hx-target="#week-{{ week_iso }}"
-              hx-swap="outerHTML"
-              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>Export shopping list</button>
+              hx-swap="outerHTML">Export shopping list</button>
     {% endif %}
   </div>
 </div>

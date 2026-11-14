@@ -1,10 +1,17 @@
 import datetime
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from recipes.models import Ingredient, Recipe, RecipeIngredient
+from recipes.models import (
+    Ingredient,
+    IngredientCategory,
+    Recipe,
+    RecipeIngredient,
+    Unit,
+)
 from todo.models import Todo
 
 from .models import CalendarMeal, MealType, TemplateMeal, TemplateWeek, Weekday
@@ -19,68 +26,173 @@ class ExportShoppingListTests(TestCase):
         self.monday = datetime.date.today() - datetime.timedelta(
             days=datetime.date.today().weekday()
         )
+        self.iso = self.monday.isoformat()
+        self.grams = Unit.objects.create(
+            name="gram", abbreviation="g", unit_type=Unit.UnitType.MASS
+        )
+        self.units = Unit.objects.create(
+            name="unit", abbreviation="ud", unit_type=Unit.UnitType.COUNT
+        )
+        self.veg = IngredientCategory.objects.create(name="Vegetables")
+        self.pantry = IngredientCategory.objects.create(name="Pantry")
 
-    def _recipe_with_ingredients(self, name, ingredient_names):
+    def _ingredient(self, name, category=None):
+        # Ingredient.save() lowercases names, so look up by the normalized
+        # form to avoid tripping the case-insensitive unique constraint.
+        ingredient, _ = Ingredient.objects.get_or_create(
+            name=name.lower(), defaults={"category": category}
+        )
+        return ingredient
+
+    def _recipe(self, name, rows):
+        """rows: (ingredient, quantity or None, unit or None)."""
         recipe = Recipe.objects.create(name=name, description="d", servings=2)
-        for ing_name in ingredient_names:
-            # Ingredient.save() lowercases names, so look up by the normalized
-            # form to avoid tripping the case-insensitive unique constraint.
-            ingredient, _ = Ingredient.objects.get_or_create(name=ing_name.lower())
-            RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient)
+        for ingredient, quantity, unit in rows:
+            RecipeIngredient.objects.create(
+                recipe=recipe,
+                ingredient=ingredient,
+                quantity=None if quantity is None else Decimal(quantity),
+                unit=unit,
+            )
         return recipe
 
-    def test_export_creates_shopping_list_with_distinct_ingredients(self):
-        pasta = self._recipe_with_ingredients("Pasta", ["Tomato", "Pasta"])
-        salad = self._recipe_with_ingredients("Salad", ["Tomato", "Lettuce"])
+    def _schedule(self, recipe, day=0, meal_type=MealType.LUNCH):
         CalendarMeal.objects.create(
-            date=self.monday, meal_type=MealType.LUNCH, recipe=pasta
-        )
-        CalendarMeal.objects.create(
-            date=self.monday + datetime.timedelta(days=1),
-            meal_type=MealType.DINNER,
-            recipe=salad,
-        )
-
-        response = self.client.post(
-            reverse("week_export_shopping_list", args=[self.monday.isoformat()])
-        )
-        self.assertEqual(response.status_code, 200)
-
-        todo = Todo.objects.get()
-        self.assertTrue(todo.name.startswith("Shopping list "))
-        names = sorted(todo.subtasks.values_list("name", flat=True))
-        # Tomato appears in both recipes but is listed once.
-        self.assertEqual(names, ["Lettuce", "Pasta", "Tomato"])
-
-    def test_export_ignores_meals_outside_the_current_week(self):
-        recipe = self._recipe_with_ingredients("NextWeek", ["Onion"])
-        CalendarMeal.objects.create(
-            date=self.monday + datetime.timedelta(days=7),
-            meal_type=MealType.LUNCH,
+            date=self.monday + datetime.timedelta(days=day),
+            meal_type=meal_type,
             recipe=recipe,
         )
 
-        self.client.post(
-            reverse("week_export_shopping_list", args=[self.monday.isoformat()])
+    def _week_setup(self):
+        tomato = self._ingredient("Tomato", self.veg)
+        pasta = self._ingredient("Pasta", self.pantry)
+        salt = self._ingredient("Salt")
+        lettuce = self._ingredient("Lettuce", self.veg)
+        self._schedule(
+            self._recipe(
+                "Pasta",
+                [
+                    (tomato, "1", self.units),
+                    (pasta, "200", self.grams),
+                    (salt, None, None),
+                ],
+            )
         )
+        self._schedule(
+            self._recipe(
+                "Salad", [(tomato, "300", self.grams), (lettuce, "1", self.units)]
+            ),
+            day=1,
+        )
+        return tomato, pasta, salt, lettuce
 
-        # Nothing scheduled this week -> no todo created.
+    def test_preview_sums_per_unit_and_groups_by_category(self):
+        self._week_setup()
+
+        response = self.client.get(reverse("week_shopping_form", args=[self.iso]))
+
+        self.assertContains(response, "<dialog")
+        self.assertEqual(
+            [i["label"] for i in response.context["items"]],
+            # Pantry, Vegetables, then uncategorized last.
+            ["Pasta: 200 g", "Lettuce: 1 ud", "Tomato: 1 ud + 300 g", "Salt"],
+        )
+        self.assertContains(response, "Shopping list week of")
+        # Nothing is created until the dialog is confirmed.
         self.assertFalse(Todo.objects.exists())
 
-    def test_export_next_week_uses_next_weeks_meals(self):
-        next_monday = self.monday + datetime.timedelta(days=7)
-        recipe = self._recipe_with_ingredients("NextWeek", ["Onion"])
-        CalendarMeal.objects.create(
-            date=next_monday, meal_type=MealType.LUNCH, recipe=recipe
+    def test_recipe_scheduled_twice_counts_twice(self):
+        tomato = self._ingredient("Tomato")
+        recipe = self._recipe("Salad", [(tomato, "150", self.grams)])
+        self._schedule(recipe, day=0)
+        self._schedule(recipe, day=0, meal_type=MealType.DINNER)
+
+        response = self.client.get(reverse("week_shopping_form", args=[self.iso]))
+
+        self.assertEqual(
+            [i["label"] for i in response.context["items"]], ["Tomato: 300 g"]
         )
+
+    def test_confirm_creates_todo_with_ticked_items_name_and_due_date(self):
+        tomato, pasta, salt, lettuce = self._week_setup()
+
+        response = self.client.post(
+            reverse("week_export_shopping_list", args=[self.iso]),
+            {
+                "name": "Big shop",
+                "due_date": "2030-01-05",
+                "ingredient": [tomato.pk, pasta.pk],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "<dialog")
+        todo = Todo.objects.get()
+        self.assertEqual(todo.name, "Big shop")
+        self.assertEqual(todo.due_date, datetime.date(2030, 1, 5))
+        self.assertEqual(
+            sorted(todo.subtasks.values_list("name", flat=True)),
+            ["Pasta: 200 g", "Tomato: 1 ud + 300 g"],
+        )
+
+    def test_confirm_ignores_ingredients_not_scheduled(self):
+        tomato, *_ = self._week_setup()
+        extra = self._ingredient("Caviar")
 
         self.client.post(
-            reverse("week_export_shopping_list", args=[next_monday.isoformat()])
+            reverse("week_export_shopping_list", args=[self.iso]),
+            {"name": "Shop", "ingredient": [tomato.pk, extra.pk]},
         )
 
-        todo = Todo.objects.get()
-        self.assertEqual(todo.name, f"Shopping list week of {next_monday:%Y-%m-%d}")
-        self.assertEqual(list(todo.subtasks.values_list("name", flat=True)), ["Onion"])
+        self.assertEqual(
+            list(Todo.objects.get().subtasks.values_list("name", flat=True)),
+            ["Tomato: 1 ud + 300 g"],
+        )
+
+    def test_confirm_with_nothing_ticked_keeps_dialog_open(self):
+        self._week_setup()
+
+        response = self.client.post(
+            reverse("week_export_shopping_list", args=[self.iso]), {"name": "Shop"}
+        )
+
+        self.assertContains(response, "<dialog")
+        self.assertContains(response, "Tick at least one item.")
+        self.assertFalse(Todo.objects.exists())
+
+    def test_confirm_rejects_bad_due_date(self):
+        tomato, *_ = self._week_setup()
+
+        response = self.client.post(
+            reverse("week_export_shopping_list", args=[self.iso]),
+            {"name": "Shop", "due_date": "nope", "ingredient": [tomato.pk]},
+        )
+
+        self.assertContains(response, "Enter a valid due date.")
+        self.assertFalse(Todo.objects.exists())
+
+    def test_preview_ignores_meals_outside_the_week(self):
+        tomato = self._ingredient("Onion")
+        self._schedule(self._recipe("NextWeek", [(tomato, None, None)]), day=7)
+
+        response = self.client.get(reverse("week_shopping_form", args=[self.iso]))
+
+        self.assertNotContains(response, "<dialog")
+        self.assertContains(response, "No ingredients scheduled this week.")
+
+    def test_next_week_preview_uses_next_weeks_meals(self):
+        onion = self._ingredient("Onion")
+        self._schedule(self._recipe("NextWeek", [(onion, "2", self.units)]), day=7)
+        next_monday = self.monday + datetime.timedelta(days=7)
+
+        response = self.client.get(
+            reverse("week_shopping_form", args=[next_monday.isoformat()])
+        )
+
+        self.assertEqual(
+            [i["label"] for i in response.context["items"]], ["Onion: 2 ud"]
+        )
+        self.assertContains(response, f"Shopping list week of {next_monday:%Y-%m-%d}")
 
 
 class WeekActionsTests(TestCase):

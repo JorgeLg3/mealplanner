@@ -1,6 +1,8 @@
 import datetime
+from collections import Counter
 
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
@@ -324,7 +326,7 @@ def _week_days(monday):
     ]
 
 
-def _render_week(request, monday, action=None, message="", error=""):
+def _render_week(request, monday, action=None, message="", error="", **extra):
     """Re-render one week's whole region (grid + action bar). Every
     import/export endpoint returns this so a single #week-<monday> swap keeps
     the meals and the action bar in sync."""
@@ -338,6 +340,7 @@ def _render_week(request, monday, action=None, message="", error=""):
             "message": message,
             "error": error,
             "templates": TemplateWeek.objects.order_by("name"),
+            **extra,
         },
     )
 
@@ -426,34 +429,123 @@ def week_save_template(request, monday):
     return _render_week(request, monday, message=f"Saved as “{template.name}”.")
 
 
+def _format_quantity(quantity):
+    """Decimal -> shortest string: 300.00 -> "300", 0.50 -> "0.5"."""
+    return f"{quantity.normalize():f}"
+
+
+def _shopping_items(dates):
+    """One entry per distinct ingredient scheduled on ``dates``, sorted by
+    ingredient category (uncategorized last) then name. Quantities are summed
+    per unit, without converting between units, e.g. "1 ud + 300 g". A recipe
+    scheduled twice counts twice."""
+    meals_per_recipe = Counter(
+        CalendarMeal.objects.filter(date__in=dates).values_list("recipe_id", flat=True)
+    )
+    by_ingredient = {}
+    for row in (
+        RecipeIngredient.objects.filter(recipe_id__in=meals_per_recipe)
+        .select_related("ingredient__category", "unit")
+        .order_by("pk")
+    ):
+        entry = by_ingredient.setdefault(
+            row.ingredient_id, {"ingredient": row.ingredient, "totals": {}}
+        )
+        if row.quantity is not None:
+            totals = entry["totals"]
+            added = row.quantity * meals_per_recipe[row.recipe_id]
+            totals[row.unit] = totals.get(row.unit, 0) + added
+
+    items = []
+    for entry in by_ingredient.values():
+        ingredient = entry["ingredient"]
+        # Units keep the order they first appear in (rows are ordered by pk).
+        amounts = " + ".join(
+            f"{_format_quantity(qty)} {unit}" if unit else _format_quantity(qty)
+            for unit, qty in entry["totals"].items()
+        )
+        name = ingredient.name.capitalize()
+        items.append(
+            {
+                "id": ingredient.pk,
+                "category": ingredient.category.name if ingredient.category else None,
+                "label": f"{name}: {amounts}" if amounts else name,
+            }
+        )
+    items.sort(key=lambda i: (i["category"] is None, i["category"] or "", i["label"]))
+    return items
+
+
 @login_required
-@require_http_methods(["POST"])
-def week_export_shopping_list(request, monday):
-    """Export: snapshot this week's scheduled ingredients into a new
-    'Shopping list week of <monday>' todo, one subtask per distinct ingredient."""
+@require_http_methods(["GET"])
+def week_shopping_form(request, monday):
+    """Open the shopping-list preview dialog: editable name/due date and one
+    checkbox per ingredient, all ticked."""
     monday = _parse_monday(monday)
-    dates = _week_dates(monday)
-    recipe_ids = CalendarMeal.objects.filter(date__in=dates).values_list(
-        "recipe_id", flat=True
-    )
-    ingredient_names = list(
-        RecipeIngredient.objects.filter(recipe_id__in=recipe_ids)
-        .values_list("ingredient__name", flat=True)
-        .distinct()
-        .order_by("ingredient__name")
-    )
-    if not ingredient_names:
+    items = _shopping_items(_week_dates(monday))
+    if not items:
         return _render_week(
             request, monday, error="No ingredients scheduled this week."
         )
-    todo = Todo.objects.create(name=f"Shopping list week of {monday:%Y-%m-%d}")
-    Subtask.objects.bulk_create(
-        [Subtask(todo=todo, name=name.capitalize()) for name in ingredient_names]
-    )
     return _render_week(
         request,
         monday,
-        message=f"Saved “{todo.name}” with {len(ingredient_names)} items.",
+        action="shopping",
+        items=items,
+        selected_ids={item["id"] for item in items},
+        list_name=f"Shopping list week of {monday:%Y-%m-%d}",
+        due_date="",
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def week_export_shopping_list(request, monday):
+    """Export: create a todo from the preview, one subtask per ticked
+    ingredient. Items are recomputed from the calendar and filtered by the
+    ticked ids, so the dialog can only remove items, never add them."""
+    monday = _parse_monday(monday)
+    items = _shopping_items(_week_dates(monday))
+    selected_ids = set()
+    for value in request.POST.getlist("ingredient"):
+        if value.isdigit():
+            selected_ids.add(int(value))
+    name = (request.POST.get("name") or "").strip()
+    due_date_str = (request.POST.get("due_date") or "").strip()
+
+    error = ""
+    due_date = None
+    if due_date_str:
+        try:
+            due_date = datetime.date.fromisoformat(due_date_str)
+        except ValueError:
+            error = "Enter a valid due date."
+    selected = [item for item in items if item["id"] in selected_ids]
+    if not name:
+        error = "Name is required."
+    elif not selected:
+        error = "Tick at least one item."
+    if error:
+        return _render_week(
+            request,
+            monday,
+            action="shopping",
+            error=error,
+            items=items,
+            selected_ids=selected_ids,
+            list_name=name,
+            due_date=due_date_str,
+        )
+
+    with transaction.atomic():
+        todo = Todo.objects.create(name=name, due_date=due_date)
+        Subtask.objects.bulk_create(
+            [Subtask(todo=todo, name=item["label"]) for item in selected]
+        )
+    return _render_week(
+        request,
+        monday,
+        message=f"Saved “{todo.name}” with {len(selected)} items.",
     )
 
 

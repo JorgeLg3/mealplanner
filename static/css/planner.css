@@ -174,3 +174,52 @@
   margin: 0;
   color: #c0392b;
 }
+
+/* Shopping-list preview: native modal <dialog>, near full-screen on phones. */
+.shopping-dialog {
+  width: min(32rem, 100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  padding: 1rem;
+  border: none;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.shopping-dialog::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.shopping-dialog__form > label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.shopping-dialog__form input[type="text"],
+.shopping-dialog__form input[type="date"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.shopping-dialog__group {
+  border: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.shopping-dialog__group legend {
+  font-weight: bold;
+  padding: 0;
+}
+
+.shopping-dialog__item {
+  display: block;
+  padding: 0.2rem 0;
+}
+
+.shopping-dialog__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}

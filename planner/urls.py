@@ -17,6 +17,7 @@ from .views import (
     week_save_template,
     week_update_template,
     week_export_shopping_list,
+    week_shopping_form,
 )
 
 urlpatterns = [
@@ -63,6 +64,11 @@ urlpatterns = [
     path("week/<str:monday>/save/", week_save_template, name="week_save_template"),
     path(
         "week/<str:monday>/update/", week_update_template, name="week_update_template"
+    ),
+    path(
+        "week/<str:monday>/shopping-list/form/",
+        week_shopping_form,
+        name="week_shopping_form",
     ),
     path(
         "week/<str:monday>/shopping-list/",
