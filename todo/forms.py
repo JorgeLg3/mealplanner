@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Subtask, Todo
+from .models import RecurringTodo, Subtask, Todo
 
 
 class TodoForm(forms.ModelForm):
@@ -19,4 +19,16 @@ class SubtaskForm(forms.ModelForm):
         fields = ["name", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
+
+
+class RecurringTodoForm(forms.ModelForm):
+    class Meta:
+        model = RecurringTodo
+        fields = ["name", "description", "every", "unit", "start_date"]
+        labels = {"start_date": "First due date"}
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "every": forms.NumberInput(attrs={"min": 1}),
+            "start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }

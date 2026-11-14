@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/todo.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{% if object %}Edit recurring todo{% else %}New recurring todo{% endif %}</h1>
+  <form method="post" class="recurring-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="todo-dialog__field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}<p class="todo-dialog__error">{{ field.errors|join:" " }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    {% if object %}
+      <p class="todo__due">Changes apply to the open todo. Changing the schedule moves its due date to the first occurrence from today; done todos are kept as they are.</p>
+    {% endif %}
+    <button type="submit">Save</button>
+    <a href="{% url 'recurring_list' %}">Cancel</a>
+  </form>
+{% endblock %}

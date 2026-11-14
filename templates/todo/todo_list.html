@@ -14,6 +14,7 @@
         <button type="button" hx-get="{% url 'todo_create' %}" hx-target="#todo-dialog">New todo</button>
       {% endif %}
       <a href="{% url 'todo_done' %}">Show done</a>
+      <a href="{% url 'recurring_list' %}">Recurring</a>
     </div>
 
     {% include "todo/_todo_list.html" %}

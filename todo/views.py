@@ -1,16 +1,19 @@
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Max, OuterRef, Q, Subquery
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from .forms import SubtaskForm, TodoForm
-from .models import Subtask, Todo
+from .forms import RecurringTodoForm, SubtaskForm, TodoForm
+from .models import RecurringTodo, Subtask, Todo
 
 
 DONE_PAGE_SIZE = 25
@@ -18,7 +21,11 @@ DONE_PAGE_SIZE = 25
 
 def _open_todos():
     # Subtasks are prefetched so the nested render stays one query per relation.
-    return Todo.objects.filter(is_done=False).prefetch_related("subtasks")
+    return (
+        Todo.objects.filter(is_done=False)
+        .select_related("recurring")
+        .prefetch_related("subtasks")
+    )
 
 
 def _group_by_due_date(todos):
@@ -51,7 +58,10 @@ def _list_context(oob=False):
 
 
 def todo_list(request):
-    """Open todos grouped by due date; done ones drop off on the next load."""
+    """Open todos grouped by due date; done ones drop off on the next load.
+    Also tops up recurrences that lost their open todo (e.g. it was deleted
+    to skip an occurrence)."""
+    RecurringTodo.ensure_all()
     return render(request, "todo/todo_list.html", _list_context())
 
 
@@ -59,6 +69,7 @@ def todo_done(request):
     """Done todos, most recently completed first, paginated."""
     todos = (
         Todo.objects.filter(is_done=True)
+        .select_related("recurring")
         .prefetch_related("subtasks")
         .order_by(F("completed_at").desc(nulls_last=True), "-created_at")
     )
@@ -66,12 +77,13 @@ def todo_done(request):
     return render(request, "todo/todo_done.html", {"page": page})
 
 
-def _render_todo(request, todo, open=False, oob=False):
+def _render_todo(request, todo, open=False, oob=False, next_todo=None):
     """Re-render just this todo (with its subtasks) in place, so a todo marked
     done stays visible, greyed out, until the page is reloaded. ``open`` keeps
     the <details> expanded after actions taken inside it; ``oob`` marks it for
-    an out-of-band swap from the dialog."""
-    context = {"todo": todo, "open": open, "oob": oob}
+    an out-of-band swap from the dialog. ``next_todo`` is the occurrence a
+    recurring tick just created, mentioned in the greyed-out row."""
+    context = {"todo": todo, "open": open, "oob": oob, "next_todo": next_todo}
     return render(request, "todo/_todo.html", context)
 
 
@@ -129,15 +141,26 @@ def todo_delete(request, pk):
 @require_http_methods(["POST"])
 def todo_toggle(request, pk):
     """Flip the todo's is_done. Marking it done also marks all its subtasks
-    done; reopening it leaves the subtasks as they are."""
-    todo = get_object_or_404(Todo, pk=pk)
+    done (and, for a recurring todo, creates the next occurrence); reopening
+    leaves the subtasks as they are and undoes the next occurrence."""
+    todo = get_object_or_404(Todo.objects.select_related("recurring"), pk=pk)
     todo.is_done = not todo.is_done
     todo.completed_at = timezone.now() if todo.is_done else None
+    recurring = todo.recurring
+    next_todo = None
     with transaction.atomic():
         todo.save(update_fields=["is_done", "completed_at"])
         if todo.is_done:
             todo.subtasks.update(is_done=True)
-    return _render_todo(request, todo)
+            if recurring:
+                next_todo = recurring.ensure_open_todo()
+        elif recurring:
+            # Undo: drop the occurrence the tick generated and rewind the
+            # schedule, so reopening leaves a single open todo.
+            recurring.todos.filter(is_done=False).exclude(pk=todo.pk).delete()
+            recurring.last_due = todo.due_date
+            recurring.save(update_fields=["last_due"])
+    return _render_todo(request, todo, next_todo=next_todo)
 
 
 @login_required
@@ -187,3 +210,54 @@ def subtask_toggle(request, pk):
     subtask.is_done = not subtask.is_done
     subtask.save(update_fields=["is_done"])
     return _render_todo(request, subtask.todo, open=True)
+
+
+class RecurringTodoList(ListView):
+    model = RecurringTodo
+    template_name = "todo/recurring_list.html"
+
+    def get_queryset(self):
+        open_todos = Todo.objects.filter(is_done=False)
+        return RecurringTodo.objects.annotate(
+            next_due=Subquery(
+                open_todos.filter(recurring=OuterRef("pk"))
+                .order_by("due_date")
+                .values("due_date")[:1]
+            ),
+            last_done=Max("todos__completed_at", filter=Q(todos__is_done=True)),
+        )
+
+
+SCHEDULE_FIELDS = {"every", "unit", "start_date"}
+
+
+class RecurringTodoCreate(LoginRequiredMixin, CreateView):
+    model = RecurringTodo
+    form_class = RecurringTodoForm
+    template_name = "todo/recurring_form.html"
+    success_url = reverse_lazy("recurring_list")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.object.ensure_open_todo()
+        return response
+
+
+class RecurringTodoUpdate(LoginRequiredMixin, UpdateView):
+    model = RecurringTodo
+    form_class = RecurringTodoForm
+    template_name = "todo/recurring_form.html"
+    success_url = reverse_lazy("recurring_list")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.object.apply_edit(
+            schedule_changed=bool(SCHEDULE_FIELDS & set(form.changed_data))
+        )
+        return response
+
+
+class RecurringTodoDelete(LoginRequiredMixin, DeleteView):
+    model = RecurringTodo
+    template_name = "todo/recurring_confirm_delete.html"
+    success_url = reverse_lazy("recurring_list")

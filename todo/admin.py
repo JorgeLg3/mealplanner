@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Subtask, Todo
+from .models import RecurringTodo, Subtask, Todo
 
 
 class SubtaskInline(admin.TabularInline):
@@ -14,3 +14,8 @@ class TodoAdmin(admin.ModelAdmin):
     list_filter = ("is_done",)
     search_fields = ("name",)
     inlines = [SubtaskInline]
+
+
+@admin.register(RecurringTodo)
+class RecurringTodoAdmin(admin.ModelAdmin):
+    list_display = ("name", "every", "unit", "start_date", "last_due")

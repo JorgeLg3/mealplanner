@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Delete recurring todo</h1>
+  <p>Delete “{{ object.name }}”? Its open todo is deleted too; todos already done are kept.</p>
+  <form method="post">
+    {% csrf_token %}
+    <a href="{% url 'recurring_list' %}">Cancel</a>
+    <button type="submit">Delete</button>
+  </form>
+{% endblock %}

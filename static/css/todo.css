@@ -174,3 +174,29 @@
   gap: 1rem;
   margin-top: 1rem;
 }
+
+.todo__recurring,
+.todo__next {
+  color: #4a90d9;
+  font-size: 0.85rem;
+}
+
+.recurring-list > .recurring {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  border-bottom: 1px solid #eee;
+  padding: 0.4rem 0;
+}
+
+.recurring-form {
+  max-width: 32rem;
+}
+
+.recurring-form input,
+.recurring-form textarea,
+.recurring-form select {
+  width: 100%;
+  box-sizing: border-box;
+}

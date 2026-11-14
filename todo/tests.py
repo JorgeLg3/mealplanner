@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Subtask, Todo
+from .models import RecurringTodo, Subtask, Todo
 from .views import DONE_PAGE_SIZE
 
 
@@ -379,3 +379,258 @@ class EditRegroupTests(TestCase):
         )
         self.assertNotIn("HX-Refresh", response)
         self.assertContains(response, f'id="todo-{self.todo.pk}"')
+
+
+class RecurrenceScheduleTests(TestCase):
+    """Pure date math; no requests."""
+
+    def _rec(self, start, every=1, unit=RecurringTodo.Unit.WEEK, **kwargs):
+        return RecurringTodo(
+            name="R", start_date=start, every=every, unit=unit, **kwargs
+        )
+
+    def test_monthly_on_31st_clamps_without_drifting(self):
+        rec = self._rec(datetime.date(2027, 1, 31), unit=RecurringTodo.Unit.MONTH)
+        self.assertEqual(
+            [rec.occurrence(n) for n in range(4)],
+            [
+                datetime.date(2027, 1, 31),
+                datetime.date(2027, 2, 28),
+                datetime.date(2027, 3, 31),
+                datetime.date(2027, 4, 30),
+            ],
+        )
+
+    def test_yearly_leap_day(self):
+        rec = self._rec(datetime.date(2028, 2, 29), unit=RecurringTodo.Unit.YEAR)
+        self.assertEqual(rec.occurrence(1), datetime.date(2029, 2, 28))
+        self.assertEqual(rec.occurrence(4), datetime.date(2032, 2, 29))
+
+    def test_first_occurrence_on_or_after(self):
+        monday = datetime.date(2026, 11, 2)
+        weekly = self._rec(monday)
+        self.assertEqual(
+            weekly.first_occurrence_on_or_after(datetime.date(2026, 11, 2)), monday
+        )
+        self.assertEqual(
+            weekly.first_occurrence_on_or_after(datetime.date(2026, 11, 26)),
+            datetime.date(2026, 11, 30),
+        )
+        fortnightly = self._rec(monday, every=2)
+        self.assertEqual(
+            fortnightly.first_occurrence_on_or_after(datetime.date(2026, 11, 10)),
+            datetime.date(2026, 11, 16),
+        )
+        quarterly = self._rec(
+            datetime.date(2026, 1, 15), every=3, unit=RecurringTodo.Unit.MONTH
+        )
+        self.assertEqual(
+            quarterly.first_occurrence_on_or_after(datetime.date(2026, 5, 1)),
+            datetime.date(2026, 7, 15),
+        )
+        daily = self._rec(monday, every=3, unit=RecurringTodo.Unit.DAY)
+        self.assertEqual(
+            daily.first_occurrence_on_or_after(datetime.date(2026, 11, 6)),
+            datetime.date(2026, 11, 8),
+        )
+
+    def test_future_start_is_first_due(self):
+        start = datetime.date.today() + datetime.timedelta(days=10)
+        self.assertEqual(self._rec(start).next_due(), start)
+
+    def test_schedule_label(self):
+        self.assertEqual(self._rec(datetime.date.today()).schedule_label, "Every week")
+        self.assertEqual(
+            self._rec(
+                datetime.date.today(), every=3, unit=RecurringTodo.Unit.MONTH
+            ).schedule_label,
+            "Every 3 months",
+        )
+
+
+class RecurringFlowTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        self.today = datetime.date.today()
+        # A weekly task anchored on this week's Monday.
+        self.monday = self.today - datetime.timedelta(days=self.today.weekday())
+
+    def _weekly(self, start=None, **kwargs):
+        rec = RecurringTodo.objects.create(
+            name="Bins", start_date=start or self.monday, **kwargs
+        )
+        rec.ensure_open_todo()
+        return rec
+
+    def _open(self, rec):
+        return rec.todos.get(is_done=False)
+
+    def test_creating_recurrence_creates_first_open_todo(self):
+        self.client.post(
+            reverse("recurring_create"),
+            {
+                "name": "Water plants",
+                "description": "",
+                "every": 3,
+                "unit": "day",
+                "start_date": self.today.isoformat(),
+            },
+        )
+        rec = RecurringTodo.objects.get()
+        todo = self._open(rec)
+        self.assertEqual(todo.name, "Water plants")
+        self.assertEqual(todo.due_date, self.today)
+
+    def test_past_start_gets_first_occurrence_from_today(self):
+        rec = self._weekly(start=self.monday - datetime.timedelta(weeks=5))
+        due = self._open(rec).due_date
+        self.assertGreaterEqual(due, self.today)
+        self.assertEqual(due.weekday(), 0)
+
+    def test_ticking_creates_next_occurrence_one_interval_later(self):
+        rec = self._weekly(start=self.today)
+        todo = self._open(rec)
+
+        response = self.client.post(reverse("todo_toggle", args=[todo.pk]))
+
+        nxt = self._open(rec)
+        self.assertEqual(nxt.due_date, self.today + datetime.timedelta(weeks=1))
+        self.assertContains(response, "Next:")
+        self.assertEqual(rec.todos.count(), 2)
+
+    def test_ticking_overdue_skips_missed_and_keeps_weekday(self):
+        rec = self._weekly(start=self.monday - datetime.timedelta(weeks=3))
+        todo = self._open(rec)
+        # Simulate it having been left open for three weeks.
+        todo.due_date = self.monday - datetime.timedelta(weeks=3)
+        todo.save()
+        rec.last_due = todo.due_date
+        rec.save()
+
+        self.client.post(reverse("todo_toggle", args=[todo.pk]))
+
+        nxt = self._open(rec)
+        self.assertGreaterEqual(nxt.due_date, self.today)
+        self.assertLess(nxt.due_date, self.today + datetime.timedelta(weeks=1))
+        self.assertEqual(nxt.due_date.weekday(), 0)
+
+    def test_unticking_undoes_next_occurrence(self):
+        rec = self._weekly(start=self.today)
+        todo = self._open(rec)
+        url = reverse("todo_toggle", args=[todo.pk])
+
+        self.client.post(url)
+        self.client.post(url)
+
+        self.assertEqual(list(rec.todos.filter(is_done=False)), [todo])
+        rec.refresh_from_db()
+        self.assertEqual(rec.last_due, todo.due_date)
+
+    def test_deleting_open_todo_skips_to_next_on_page_load(self):
+        rec = self._weekly(start=self.today)
+        todo = self._open(rec)
+        self.client.post(reverse("todo_delete", args=[todo.pk]))
+
+        self.client.get(reverse("todo_list"))
+
+        self.assertEqual(
+            self._open(rec).due_date, self.today + datetime.timedelta(weeks=1)
+        )
+
+    def test_page_load_does_not_duplicate_open_todo(self):
+        rec = self._weekly()
+        self.client.get(reverse("todo_list"))
+        self.client.get(reverse("todo_list"))
+        self.assertEqual(rec.todos.filter(is_done=False).count(), 1)
+
+    def test_edit_updates_open_todo_and_keeps_done_history(self):
+        rec = self._weekly(start=self.today)
+        done = self._open(rec)
+        self.client.post(reverse("todo_toggle", args=[done.pk]))
+        open_todo = self._open(rec)
+
+        self.client.post(
+            reverse("recurring_update", args=[rec.pk]),
+            {
+                "name": "Recycling",
+                "description": "Blue bin",
+                "every": 1,
+                "unit": "week",
+                "start_date": self.today.isoformat(),
+            },
+        )
+
+        open_todo.refresh_from_db()
+        done.refresh_from_db()
+        self.assertEqual(open_todo.name, "Recycling")
+        self.assertEqual(open_todo.description, "Blue bin")
+        self.assertEqual(open_todo.due_date, self.today + datetime.timedelta(weeks=1))
+        self.assertEqual(done.name, "Bins")
+
+    def test_edit_schedule_moves_open_todo_due_date(self):
+        rec = self._weekly(start=self.today + datetime.timedelta(days=3))
+        new_start = self.today + datetime.timedelta(days=1)
+
+        self.client.post(
+            reverse("recurring_update", args=[rec.pk]),
+            {
+                "name": "Bins",
+                "description": "",
+                "every": 2,
+                "unit": "week",
+                "start_date": new_start.isoformat(),
+            },
+        )
+
+        self.assertEqual(self._open(rec).due_date, new_start)
+        self.assertEqual(rec.todos.filter(is_done=False).count(), 1)
+
+    def test_delete_removes_open_todo_keeps_done_ones(self):
+        rec = self._weekly(start=self.today)
+        done = self._open(rec)
+        self.client.post(reverse("todo_toggle", args=[done.pk]))
+
+        self.client.post(reverse("recurring_delete", args=[rec.pk]))
+
+        self.assertFalse(RecurringTodo.objects.exists())
+        self.assertEqual(list(Todo.objects.all()), [done])
+        done.refresh_from_db()
+        self.assertIsNone(done.recurring)
+
+    def test_list_shows_next_and_last_done(self):
+        rec = self._weekly(start=self.today)
+        self.client.post(reverse("todo_toggle", args=[self._open(rec).pk]))
+
+        response = self.client.get(reverse("recurring_list"))
+
+        row = response.context["recurringtodo_list"][0]
+        self.assertEqual(row.next_due, self.today + datetime.timedelta(weeks=1))
+        self.assertIsNotNone(row.last_done)
+        self.assertContains(response, "Every week")
+
+    def test_todo_row_shows_recurring_badge(self):
+        self._weekly()
+        response = self.client.get(reverse("todo_list"))
+        self.assertContains(response, "↻ Every week")
+
+    def test_rejects_every_zero(self):
+        response = self.client.post(
+            reverse("recurring_create"),
+            {"name": "X", "every": 0, "unit": "day", "start_date": "2030-01-01"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RecurringTodo.objects.exists())
+
+    def test_write_pages_require_login(self):
+        rec = self._weekly()
+        self.client.logout()
+        for url in [
+            reverse("recurring_create"),
+            reverse("recurring_update", args=[rec.pk]),
+            reverse("recurring_delete", args=[rec.pk]),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 302)

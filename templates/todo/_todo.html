@@ -2,7 +2,8 @@
 {# summary; description, subtasks and edit controls inside. Every action   #}
 {# returns this partial and swaps it in place, so a todo marked done stays #}
 {# put (greyed out) until the page is reloaded, when the list leaves it out.#}
-{# Context: todo, open (keep <details> expanded), oob (out-of-band swap)    #}
+{# Context: todo, open (keep <details> expanded), oob (out-of-band swap),   #}
+{#          next_todo (optional: occurrence a recurring tick just created)  #}
 <li id="todo-{{ todo.pk }}"
     class="todo{% if todo.is_done %} todo--done{% endif %}"
     {% if oob %}hx-swap-oob="true"{% endif %}>
@@ -24,6 +25,8 @@
         <span class="todo__due{% if todo.is_overdue %} todo__due--overdue{% endif %}">{{ todo.due_date|date:"D j M" }}</span>
       {% endif %}
       {% if todo.subtask_progress %}<span class="todo__progress">{{ todo.subtask_progress }}</span>{% endif %}
+      {% if todo.recurring %}<span class="todo__recurring" title="{{ todo.recurring.schedule_label }}">↻ {{ todo.recurring.schedule_label }}</span>{% endif %}
+      {% if next_todo %}<span class="todo__next">Next: {{ next_todo.due_date|date:"D j M" }}</span>{% endif %}
     </summary>
 
     <div class="todo__body">

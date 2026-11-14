@@ -1,6 +1,10 @@
 from django.urls import path
 
 from .views import (
+    RecurringTodoCreate,
+    RecurringTodoDelete,
+    RecurringTodoList,
+    RecurringTodoUpdate,
     subtask_create,
     subtask_delete,
     subtask_edit,
@@ -26,4 +30,16 @@ urlpatterns = [
     path("subtasks/<int:pk>/edit/", subtask_edit, name="subtask_edit"),
     path("subtasks/<int:pk>/delete/", subtask_delete, name="subtask_delete"),
     path("subtasks/<int:pk>/toggle/", subtask_toggle, name="subtask_toggle"),
+    path("recurring/", RecurringTodoList.as_view(), name="recurring_list"),
+    path("recurring/create/", RecurringTodoCreate.as_view(), name="recurring_create"),
+    path(
+        "recurring/<int:pk>/edit/",
+        RecurringTodoUpdate.as_view(),
+        name="recurring_update",
+    ),
+    path(
+        "recurring/<int:pk>/delete/",
+        RecurringTodoDelete.as_view(),
+        name="recurring_delete",
+    ),
 ]

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/todo.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Recurring todos</h1>
+  <div class="todos__toolbar">
+    {% if user.is_authenticated %}<a href="{% url 'recurring_create' %}">New recurring todo</a>{% endif %}
+    <a href="{% url 'todo_list' %}">Back to todos</a>
+  </div>
+
+  <ul class="todo-list recurring-list">
+    {% for recurring in recurringtodo_list %}
+      <li class="recurring">
+        <span class="todo__name">{{ recurring.name }}</span>
+        <span class="todo__recurring">↻ {{ recurring.schedule_label }}</span>
+        <span class="todo__due">
+          Next: {{ recurring.next_due|date:"D j M Y"|default:"—" }}
+          · Last done: {{ recurring.last_done|date:"D j M Y"|default:"never" }}
+        </span>
+        {% if user.is_authenticated %}
+          <a href="{% url 'recurring_update' recurring.pk %}">Edit</a>
+          <a href="{% url 'recurring_delete' recurring.pk %}">Delete</a>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li>No recurring todos yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
