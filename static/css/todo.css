@@ -3,39 +3,140 @@
   padding-left: 0;
 }
 
-.todo-list--subtasks {
-  padding-left: 1.75rem;
-}
-
 .todo {
   margin: 0.25rem 0;
+}
+
+/* Top-level rows: collapsible, like the template previews. */
+.todo-list > .todo {
+  border-bottom: 1px solid #eee;
+  padding: 0.35rem 0;
+}
+
+.todo__summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.todo__summary input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.todo__summary input[disabled],
+.todo__check input[disabled] {
+  cursor: default;
+}
+
+.todo__due,
+.todo__progress,
+.todo__description {
+  color: #666;
+}
+
+.todo__due--overdue {
+  color: #c0392b;
+  font-weight: bold;
+}
+
+.todo__progress {
+  font-size: 0.85rem;
+}
+
+.todo__body {
+  margin: 0.25rem 0 0.5rem 1.75rem;
+}
+
+.todo__description {
+  margin: 0 0 0.5rem;
+}
+
+.todo-list--subtasks {
+  margin: 0 0 0.5rem;
 }
 
 .todo__check {
   cursor: pointer;
 }
 
-.todo__check input[disabled] {
-  cursor: default;
+.subtask__action {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0 0.25rem;
 }
 
-.todo__due,
-.todo__description {
-  color: #666;
+.subtask__action:hover {
+  color: #4a90d9;
 }
 
-.todo__description {
-  margin: 0.15rem 0 0 1.75rem;
+.subtask__action--delete:hover,
+.todo__delete:hover {
+  color: #c0392b;
 }
 
-/* Done items: struck through and muted. Applies to the item's own row
-   only, so a done subtask doesn't strike its open siblings. */
+.todo__add-subtask,
+.subtask__form {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.todo__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Done items: struck through and muted. Scoped to the item's own row so a
+   done subtask doesn't strike its open siblings. */
 .todo--done > .todo__check .todo__name,
-.todo--done > .todo__due {
+.todo--done > .todo__details > .todo__summary .todo__name,
+.todo--done > .todo__due,
+.todo--done > .todo__details > .todo__summary .todo__due {
   text-decoration: line-through;
   color: #999;
 }
 
-.todo--done > .todo__description {
-  color: #aaa;
+/* Create/edit dialog: native modal <dialog>. */
+.todo-dialog {
+  width: min(32rem, 100vw - 2rem);
+  padding: 1rem;
+  border: none;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.todo-dialog::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.todo-dialog__field {
+  margin-bottom: 0.75rem;
+}
+
+.todo-dialog__field label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.15rem;
+}
+
+.todo-dialog__field input,
+.todo-dialog__field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.todo-dialog__error {
+  color: #c0392b;
+  margin: 0.15rem 0 0;
+}
+
+.todo-dialog__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }

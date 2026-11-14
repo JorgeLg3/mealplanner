@@ -1,0 +1,17 @@
+{# Inline edit form replacing one subtask line; pre-filled since it's a rename. #}
+{# Context: subtask, form #}
+<li class="todo subtask" id="subtask-{{ subtask.pk }}">
+  <form class="subtask__form"
+        hx-post="{% url 'subtask_edit' subtask.pk %}"
+        hx-target="#todo-{{ subtask.todo_id }}"
+        hx-swap="outerHTML">
+    {{ form.name }}
+    {{ form.due_date }}
+    <button type="submit">Save</button>
+    <button type="button"
+            hx-get="{% url 'todo_row' subtask.todo_id %}"
+            hx-target="#todo-{{ subtask.todo_id }}"
+            hx-swap="outerHTML">Cancel</button>
+    {% if form.errors %}<p class="todo-dialog__error">{{ form.errors.name|join:" " }}{{ form.errors.due_date|join:" " }}</p>{% endif %}
+  </form>
+</li>

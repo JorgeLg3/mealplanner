@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import models
 
 
@@ -14,6 +16,23 @@ class Todo(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_overdue(self):
+        return (
+            not self.is_done
+            and self.due_date is not None
+            and self.due_date < datetime.date.today()
+        )
+
+    @property
+    def subtask_progress(self):
+        """ "done/total" for the summary line, or "" without subtasks. Uses
+        subtasks.all() so a prefetch avoids extra queries."""
+        subtasks = self.subtasks.all()
+        if not subtasks:
+            return ""
+        return f"{sum(s.is_done for s in subtasks)}/{len(subtasks)}"
 
 
 class Subtask(models.Model):

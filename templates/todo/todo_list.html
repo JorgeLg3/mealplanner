@@ -6,6 +6,16 @@
 {% endblock %}
 
 {% block content %}
-  <h1>Todos</h1>
-  {% include "todo/_todo_list.html" %}
+  {# hx-headers sits on the wrapper so rows and the dialog both inherit the CSRF token. #}
+  <div class="todos" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <h1>Todos</h1>
+    {% if user.is_authenticated %}
+      <button type="button" hx-get="{% url 'todo_create' %}" hx-target="#todo-dialog">New todo</button>
+    {% endif %}
+
+    {% include "todo/_todo_list.html" %}
+
+    {# Create/edit dialogs are loaded in here. #}
+    <div id="todo-dialog"></div>
+  </div>
 {% endblock %}

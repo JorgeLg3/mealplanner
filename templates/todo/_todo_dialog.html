@@ -1,0 +1,29 @@
+{# Create/edit dialog, swapped into #todo-dialog. On success the server    #}
+{# returns an empty body (removing the dialog) plus an out-of-band swap of #}
+{# the list (create) or the row (edit). On errors it re-renders this.      #}
+{# Context: form, todo (None when creating) #}
+<dialog class="todo-dialog" id="todo-dialog-modal">
+  <form class="todo-dialog__form"
+        {% if todo %}
+          hx-post="{% url 'todo_edit' todo.pk %}"
+        {% else %}
+          hx-post="{% url 'todo_create' %}"
+        {% endif %}
+        hx-target="#todo-dialog">
+    {% csrf_token %}
+    <h2>{% if todo %}Edit todo{% else %}New todo{% endif %}</h2>
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="todo-dialog__field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="todo-dialog__error">{{ field.errors|join:" " }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="todo-dialog__actions">
+      <button type="submit">{% if todo %}Save{% else %}Create{% endif %}</button>
+      <button type="button" onclick="this.closest('dialog').close()">Cancel</button>
+    </div>
+  </form>
+</dialog>
+<script>document.getElementById("todo-dialog-modal").showModal();</script>

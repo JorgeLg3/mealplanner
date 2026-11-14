@@ -1,8 +1,8 @@
 {# The list of open todos; each row is its own swappable partial. #}
-{# Context: todos #}
-<ul id="todo-list" class="todo-list" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+{# Context: todos, oob (optional: out-of-band swap after creating a todo) #}
+<ul id="todo-list" class="todo-list"{% if oob %} hx-swap-oob="true"{% endif %}>
   {% for todo in todos %}
-    {% include "todo/_todo.html" %}
+    {% include "todo/_todo.html" with open=False oob=False %}
   {% empty %}
     <li>No todos yet.</li>
   {% endfor %}
