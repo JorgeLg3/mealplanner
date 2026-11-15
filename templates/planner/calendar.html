@@ -1,26 +1,54 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Planner · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/planner.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>Meal calendar</h1>
+  <header class="page-header planner-header">
+    <h1 class="page-title">{% include "icons/calendar.svg" %}Meal calendar</h1>
+  </header>
 
-  {# Weekday names, shared across every week below. #}
-  <div class="week-grid week-grid--header">
-    {% for label in weekday_labels %}
-      <div class="week-grid__day">{{ label }}</div>
-    {% endfor %}
+  {# Week bar: label + prev/next. On phones it's sticky and adds a Mon–Sun   #}
+  {# strip; the day in view is highlighted (planner.js) and tapping scrolls. #}
+  <div class="week-bar" id="week-bar">
+    <div class="week-bar__nav">
+      <a class="btn icon-btn" href="?week={{ prev_monday|date:'Y-m-d' }}" aria-label="Previous week">{% include "icons/chevron-left.svg" %}</a>
+      <div class="week-bar__label">
+        <span class="week-bar__range">
+          {{ selected_monday|date:"M j" }} – {% if selected_monday.month != selected_sunday.month %}{{ selected_sunday|date:"M j" }}{% else %}{{ selected_sunday|date:"j" }}{% endif %}, {{ selected_sunday|date:"Y" }}
+        </span>
+        {% if selected_monday == this_monday %}
+          <span class="badge">This week</span>
+        {% else %}
+          <a class="week-bar__today" href="?">Back to this week</a>
+        {% endif %}
+      </div>
+      <a class="btn icon-btn icon-btn--flip" href="?week={{ next_monday|date:'Y-m-d' }}" aria-label="Next week">{% include "icons/chevron-left.svg" %}</a>
+    </div>
+
+    <nav class="day-strip" aria-label="Days of the week">
+      {% for day in weeks.0.days %}
+        <a class="day-strip__day{% if day.is_today %} is-today{% endif %}"
+           href="#day-{{ day.date|date:'Y-m-d' }}"
+           data-day="{{ day.date|date:'Y-m-d' }}">
+          <span class="day-strip__name">{{ day.date|date:"D" }}</span>
+          <span class="day-strip__date">{{ day.date|date:"j" }}</span>
+        </a>
+      {% endfor %}
+    </nav>
   </div>
 
   {% for week in weeks %}
-    <section class="week-section{% if week.is_current %} week-section--current{% endif %}">
-      {% if week.is_current %}
-        <h2 class="week-section__month">{{ week.start_date|date:"F Y" }}</h2>
-      {% endif %}
-      {% include "planner/_week.html" with monday=week.start_date days=week.days templates=templates %}
+    {# Phones show only the selected week; the arrows move between weeks. #}
+    <section class="week-panel-wrap{% if not forloop.first %} week-panel-wrap--next{% endif %}"
+             aria-label="Week of {{ week.monday|date:'M j' }}">
+      {% include "planner/_week.html" with monday=week.monday days=week.days templates=templates %}
     </section>
   {% endfor %}
+
+  <script src="{% static 'js/planner.js' %}" defer></script>
 {% endblock %}

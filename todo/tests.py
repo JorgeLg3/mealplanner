@@ -285,14 +285,13 @@ class GroupingTests(TestCase):
         Todo.objects.create(name="Next week", due_date=sunday + datetime.timedelta(1))
         Todo.objects.create(name="Someday")
 
+        groups = self._groups()
+        # On a Sunday "Today" and "Sunday" share a due date, so their order
+        # within the group isn't fixed; compare that group as a set.
+        self.assertCountEqual(groups.pop("week"), ["Today", "Sunday"])
         self.assertEqual(
-            self._groups(),
-            {
-                "overdue": ["Late"],
-                "week": ["Today", "Sunday"],
-                "later": ["Next week"],
-                "none": ["Someday"],
-            },
+            groups,
+            {"overdue": ["Late"], "later": ["Next week"], "none": ["Someday"]},
         )
 
     def test_empty_groups_hidden_and_later_collapsed(self):

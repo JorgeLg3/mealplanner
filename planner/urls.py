@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    TemplateWeekCreate,
     TemplateWeekList,
     TemplateWeekDetail,
     PlannerCalendar,
@@ -23,6 +24,7 @@ from .views import (
 urlpatterns = [
     path("", PlannerCalendar.as_view(), name="planner_calendar"),
     path("templates/", TemplateWeekList.as_view(), name="templateweek_list"),
+    path("templates/create/", TemplateWeekCreate.as_view(), name="templateweek_create"),
     path(
         "templates/<int:pk>/", TemplateWeekDetail.as_view(), name="templateweek_detail"
     ),

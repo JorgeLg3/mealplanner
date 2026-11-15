@@ -1,38 +1,51 @@
-{# A single Mon–Sun slot for a TemplateWeek (filled or empty), swappable via HTMX. #}
-{# Context: templateweek_pk, weekday, meal_type, meal_type_label, meal (TemplateMeal or None) #}
-{#          readonly (optional): render without swap/remove/add controls or the HTMX id #}
+{# A single TemplateWeek slot, using the planner's .slot component.          #}
+{# Editable: swappable via HTMX (Add / Replace / Remove), like the calendar. #}
+{# readonly: list previews; no controls, no id, and an empty slot doesn't    #}
+{# pretend to be editable.                                                   #}
+{# Context: templateweek_pk, weekday, meal_type, meal_type_label,            #}
+{#          meal (TemplateMeal or None), weekday_label (optional), readonly  #}
 {% if readonly %}
-<div class="week-grid__cell">
-  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+<div class="slot slot--readonly{% if meal %} slot--filled{% else %} slot--empty{% endif %}">
+  <span class="label slot__label">{{ meal_type_label }}</span>
   {% if meal %}
-    <a class="week-grid__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+    <a class="slot__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+  {% else %}
+    <span class="slot__none">No meal</span>
   {% endif %}
 </div>
 {% else %}
-<div class="week-grid__cell" id="cell-{{ weekday }}-{{ meal_type }}">
-  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+<div class="slot{% if meal %} slot--filled{% else %} slot--empty{% endif %}" id="cell-{{ weekday }}-{{ meal_type }}">
+  <span class="label slot__label">{{ meal_type_label }}</span>
   {% if meal %}
+    <a class="slot__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+    {% if user.is_authenticated %}
+      <div class="slot__actions">
+        <button type="button"
+                class="icon-btn slot__action"
+                aria-label="Replace {{ meal_type_label|lower }}{% if weekday_label %} on {{ weekday_label }}{% endif %}"
+                title="Replace"
+                hx-get="{% url 'templatemeal_form' templateweek_pk weekday meal_type %}"
+                hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+                hx-swap="outerHTML">{% include "icons/pencil.svg" %}</button>
+        <button type="button"
+                class="icon-btn slot__action slot__action--remove"
+                aria-label="Remove {{ meal_type_label|lower }}{% if weekday_label %} on {{ weekday_label }}{% endif %}"
+                title="Remove"
+                hx-delete="{% url 'templatemeal' templateweek_pk weekday meal_type %}"
+                hx-target="#cell-{{ weekday }}-{{ meal_type }}"
+                hx-swap="outerHTML"
+                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>{% include "icons/x.svg" %}</button>
+      </div>
+    {% endif %}
+  {% elif user.is_authenticated %}
     <button type="button"
-            class="week-grid__delete"
-            aria-label="Remove meal"
-            hx-delete="{% url 'templatemeal' templateweek_pk weekday meal_type %}"
-            hx-target="#cell-{{ weekday }}-{{ meal_type }}"
-            hx-swap="outerHTML"
-            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>×</button>
-    <button type="button"
-            class="week-grid__swap"
-            aria-label="Swap meal"
-            title="Swap meal"
+            class="slot__add"
+            aria-label="Add {{ meal_type_label|lower }}{% if weekday_label %} on {{ weekday_label }}{% endif %}"
             hx-get="{% url 'templatemeal_form' templateweek_pk weekday meal_type %}"
             hx-target="#cell-{{ weekday }}-{{ meal_type }}"
-            hx-swap="outerHTML">✎</button>
-    <a class="week-grid__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+            hx-swap="outerHTML">{% include "icons/plus.svg" %}<span>Add<span class="slot__add-long"> {{ meal_type_label|lower }}</span></span></button>
   {% else %}
-    <button type="button"
-            class="week-grid__add"
-            hx-get="{% url 'templatemeal_form' templateweek_pk weekday meal_type %}"
-            hx-target="#cell-{{ weekday }}-{{ meal_type }}"
-            hx-swap="outerHTML">+</button>
+    <span class="slot__none">No meal</span>
   {% endif %}
 </div>
 {% endif %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}New template · Meal Planner{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{% url 'templateweek_list' %}">{% include "icons/chevron-left.svg" %}Back to templates</a>
+  <header class="page-header">
+    <div>
+      <h1>New template</h1>
+      <p class="page-header__subtitle">Give it a name; you'll add the meals next.</p>
+    </div>
+  </header>
+
+  <form method="post" class="panel form-narrow">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}<p class="field__error">{{ form.name.errors|join:" " }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="{{ form.description.id_for_label }}">Description <span class="text-secondary">(optional)</span></label>
+      {{ form.description }}
+      {% if form.description.errors %}<p class="field__error">{{ form.description.errors|join:" " }}</p>{% endif %}
+    </div>
+    <div class="form-actions">
+      <a class="btn btn--secondary" href="{% url 'templateweek_list' %}">Cancel</a>
+      <button type="submit">Create template</button>
+    </div>
+  </form>
+{% endblock %}

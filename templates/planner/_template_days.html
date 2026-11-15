@@ -1,0 +1,17 @@
+{# A TemplateWeek's Mon–Sun as the planner's .day/.slot layout (no dates).  #}
+{# Seven columns on desktop; stacked day cards on phones.                   #}
+{# Context: days (build_days output), templateweek_pk, readonly (optional)  #}
+<div class="week-days week-days--template{% if readonly %} week-days--readonly{% endif %}">
+  {% for day in days %}
+    <section class="day" aria-label="{{ day.label }}">
+      <header class="day__header">
+        <span class="day__name">{{ day.label }}</span>
+        <span class="day__name day__name--short" aria-hidden="true">{{ day.label|slice:":3" }}</span>
+      </header>
+      <div class="day__slots">
+        {% include "planner/_meal_cell.html" with weekday=day.value weekday_label=day.label meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
+        {% include "planner/_meal_cell.html" with weekday=day.value weekday_label=day.label meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
+      </div>
+    </section>
+  {% endfor %}
+</div>

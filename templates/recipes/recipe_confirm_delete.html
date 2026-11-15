@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 
+{% block title %}Delete {{ object.name }} · Meal Planner{% endblock %}
+
 {% block content %}
-<h1>Delete recipe</h1>
-  <p>Are you sure you want to delete "{{ object.name }}"?</p>
-  <form action="" method="post">{% csrf_token %}
-    <a href="{% url 'recipe_detail' object.pk %}">Cancel</a>
-    <input type="submit" value="Delete">
-  </form>
+  <div class="auth-card">
+    <h1>Delete recipe?</h1>
+    <p class="text-secondary">“{{ object.name }}” and its ingredient list will be removed. This can't be undone.</p>
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <a class="btn btn--secondary" href="{% url 'recipe_detail' object.pk %}">Cancel</a>
+      <button type="submit" class="btn--danger-solid">Delete recipe</button>
+    </form>
+  </div>
 {% endblock %}

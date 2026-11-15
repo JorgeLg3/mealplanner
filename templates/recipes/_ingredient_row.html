@@ -1,0 +1,29 @@
+{# One ingredient row of the formset (also used as the JS blueprint). #}
+{# Context: f (a RecipeIngredientForm) #}
+<div class="ingredient-row{% if f.errors %} has-errors{% endif %}">
+  {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="field ingredient-row__name">
+    <label for="{{ f.ingredient_name.id_for_label }}">Ingredient</label>
+    {{ f.ingredient_name }}
+    {% if f.ingredient_name.errors %}<p class="field__error">{{ f.ingredient_name.errors|join:" " }}</p>{% endif %}
+  </div>
+  <div class="field ingredient-row__qty">
+    <label for="{{ f.quantity.id_for_label }}">Quantity</label>
+    {{ f.quantity }}
+    {% if f.quantity.errors %}<p class="field__error">{{ f.quantity.errors|join:" " }}</p>{% endif %}
+  </div>
+  <div class="field ingredient-row__unit">
+    <label for="{{ f.unit.id_for_label }}">Unit</label>
+    {{ f.unit }}
+  </div>
+  <div class="field ingredient-row__note">
+    <label for="{{ f.prep_note.id_for_label }}">Note</label>
+    {{ f.prep_note }}
+  </div>
+  {# DELETE is the formset's own flag; ticking it greys the row out. #}
+  <label class="ingredient-row__remove" title="Remove ingredient">
+    {{ f.DELETE }}
+    <span>Remove</span>
+  </label>
+  {% if f.non_field_errors %}<p class="field__error ingredient-row__errors">{{ f.non_field_errors|join:" " }}</p>{% endif %}
+</div>

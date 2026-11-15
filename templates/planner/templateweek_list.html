@@ -1,40 +1,56 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Templates · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/planner.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>Week templates</h1>
-  {% for entry in templates %}
-    {% with template=entry.template %}
-      {# Collapsible read-only preview; editing stays on the detail page. #}
-      <details class="template-preview">
-        <summary>
-          <span class="template-preview__name">{{ template.name }}</span>
-          <span class="template-preview__count">{{ entry.meal_count }}/{{ slot_count }} meals</span>
-          <a href="{% url 'templateweek_detail' template.pk %}">Open</a>
-          {% if template.description %}
-            <span class="template-preview__description">— {{ template.description }}</span>
-          {% endif %}
-        </summary>
+  <header class="page-header">
+    <h1 class="page-title">{% include "icons/layers.svg" %}Week templates</h1>
+    {% if user.is_authenticated %}
+      <div class="page-header__actions">
+        <a class="btn btn--primary" href="{% url 'templateweek_create' %}">{% include "icons/plus.svg" %}New template</a>
+      </div>
+    {% endif %}
+  </header>
 
-        {# Same Mon–Sun grid as the detail page, read-only. #}
-        <div class="week-grid">
-          {% for day in entry.days %}
-            <div class="week-grid__day">{{ day.label }}</div>
-          {% endfor %}
-          {% for day in entry.days %}
-            {% include "planner/_meal_cell.html" with weekday=day.value meal_type="lunch" meal_type_label="Lunch" meal=day.lunch readonly=True %}
-          {% endfor %}
-          {% for day in entry.days %}
-            {% include "planner/_meal_cell.html" with weekday=day.value meal_type="dinner" meal_type_label="Dinner" meal=day.dinner readonly=True %}
-          {% endfor %}
-        </div>
-      </details>
-    {% endwith %}
-  {% empty %}
-    <p>No week templates yet.</p>
-  {% endfor %}
+  {% if templates %}
+    <div class="template-list">
+      {% for entry in templates %}
+        {% with template=entry.template %}
+          {# Collapsible read-only preview; editing happens on the template's page. #}
+          <details class="template-row">
+            <summary class="template-row__summary">
+              <span class="template-row__chevron" aria-hidden="true">{% include "icons/chevron-down.svg" %}</span>
+              <span class="template-row__text">
+                <span class="template-row__name">{{ template.name }}</span>
+                <span class="template-row__count">{{ entry.meal_count }}/{{ slot_count }} meals</span>
+                {% if template.description %}
+                  <span class="template-row__description">{{ template.description }}</span>
+                {% endif %}
+              </span>
+              <a class="btn btn--secondary btn--sm template-row__open" href="{% url 'templateweek_detail' template.pk %}">{% include "icons/external-link.svg" %}Open</a>
+            </summary>
+
+            <div class="template-row__preview">
+              <div class="week-panel__scroll">
+                {% include "planner/_template_days.html" with days=entry.days templateweek_pk=template.pk readonly=True %}
+              </div>
+            </div>
+          </details>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No week templates yet</p>
+      <p>Save a planned week from the planner, or start an empty one.</p>
+      {% if user.is_authenticated %}
+        <p><a class="btn btn--primary" href="{% url 'templateweek_create' %}">{% include "icons/plus.svg" %}New template</a></p>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}

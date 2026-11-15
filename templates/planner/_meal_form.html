@@ -1,13 +1,16 @@
-{# Inline add-meal form for a single TemplateWeek slot, swapped into the cell. #}
-{# Context: templateweek_pk, weekday, meal_type, meal_type_label, recipes, error (optional) #}
-<div class="week-grid__cell" id="cell-{{ weekday }}-{{ meal_type }}">
-  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
-  <form class="week-grid__form"
+{# Inline add/replace form for a single TemplateWeek slot, swapped into the cell. #}
+{# Opens empty even when replacing: Cancel re-renders the current meal.          #}
+{# Context: templateweek_pk, weekday, meal_type, meal_type_label, recipes, error  #}
+<div class="slot slot--editing" id="cell-{{ weekday }}-{{ meal_type }}">
+  <span class="label slot__label">{{ meal_type_label }}</span>
+  <form class="slot__form"
         hx-post="{% url 'templatemeal' templateweek_pk weekday meal_type %}"
         hx-target="#cell-{{ weekday }}-{{ meal_type }}"
         hx-swap="outerHTML">
     {% csrf_token %}
+    <label class="visually-hidden" for="recipe-{{ weekday }}-{{ meal_type }}">Recipe for {{ meal_type_label|lower }}</label>
     <input type="text"
+           id="recipe-{{ weekday }}-{{ meal_type }}"
            name="recipe"
            list="recipes-{{ weekday }}-{{ meal_type }}"
            placeholder="Search recipe…"
@@ -19,10 +22,11 @@
         <option value="{{ recipe.name }}"></option>
       {% endfor %}
     </datalist>
-    {% if error %}<p class="week-grid__error">{{ error }}</p>{% endif %}
-    <div class="week-grid__form-actions">
-      <button type="submit">Save</button>
+    {% if error %}<p class="field__error">{{ error }}</p>{% endif %}
+    <div class="slot__form-actions">
+      <button type="submit" class="btn--sm">Save</button>
       <button type="button"
+              class="btn--ghost btn--sm"
               hx-get="{% url 'templatemeal_cell' templateweek_pk weekday meal_type %}"
               hx-target="#cell-{{ weekday }}-{{ meal_type }}"
               hx-swap="outerHTML">Cancel</button>

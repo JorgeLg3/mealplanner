@@ -1,0 +1,90 @@
+{% load static %}
+{# Shared create/edit recipe form. Context: form, ingredient_formset, ingredients, cancel_url #}
+<form action="" method="post" enctype="multipart/form-data" class="recipe-form">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <section class="panel recipe-form__section">
+    <h2 class="recipe-form__heading">Basic information</h2>
+    <div class="recipe-form__grid">
+      <div class="field recipe-form__name">
+        <label for="{{ form.name.id_for_label }}">Recipe name</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="field__error">{{ form.name.errors|join:" " }}</p>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.category.id_for_label }}">Category</label>
+        {{ form.category }}
+        {% if form.category.errors %}<p class="field__error">{{ form.category.errors|join:" " }}</p>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.servings.id_for_label }}">Servings</label>
+        {{ form.servings }}
+        {% if form.servings.errors %}<p class="field__error">{{ form.servings.errors|join:" " }}</p>{% endif %}
+      </div>
+      {# Photo: optional. Rendered by hand around Django's ClearableFileInput #}
+      {# names ("image", "image-clear") so the default clear behaviour works. #}
+      <div class="field recipe-form__photo">
+        <span class="field__label">Photo <span class="text-secondary">(optional)</span></span>
+        <div class="photo-field">
+          {% if form.instance.image %}
+            <img class="photo-field__preview" src="{{ form.instance.image.url }}" alt="">
+          {% else %}
+            <div class="photo-field__preview photo-field__preview--empty" aria-hidden="true">{% include "icons/image.svg" %}</div>
+          {% endif %}
+          <div class="photo-field__controls">
+            <label class="btn btn--secondary btn--sm photo-field__pick">
+              {% include "icons/upload.svg" %}
+              {% if form.instance.image %}Replace photo{% else %}Choose photo{% endif %}
+              <input type="file" name="{{ form.image.html_name }}" id="{{ form.image.id_for_label }}" accept="image/*" class="visually-hidden">
+            </label>
+            {% if form.instance.image %}
+              <label class="photo-field__clear">
+                <input type="checkbox" name="{{ form.image.html_name }}-clear" id="{{ form.image.html_name }}-clear_id">
+                Remove photo
+              </label>
+            {% endif %}
+            <span class="field__help" data-photo-name>JPEG or PNG. Large photos are resized automatically.</span>
+          </div>
+        </div>
+        {% if form.image.errors %}<p class="field__error">{{ form.image.errors|join:" " }}</p>{% endif %}
+      </div>
+      <div class="field recipe-form__description">
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}<p class="field__error">{{ form.description.errors|join:" " }}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel recipe-form__section">
+    <h2 class="recipe-form__heading">Ingredients</h2>
+    {{ ingredient_formset.management_form }}
+    {{ ingredient_formset.non_form_errors }}
+    <div id="ingredient-forms" data-prefix="{{ ingredient_formset.prefix }}">
+      {% for f in ingredient_formset %}
+        {% include "recipes/_ingredient_row.html" %}
+      {% endfor %}
+    </div>
+
+    {# Blueprint row (not submitted): its __prefix__ placeholder is swapped for a real index by JS. #}
+    <template id="empty-ingredient-form">
+      {% include "recipes/_ingredient_row.html" with f=ingredient_formset.empty_form %}
+    </template>
+    <button type="button" id="add-ingredient" class="btn--secondary">{% include "icons/plus.svg" %}Add ingredient</button>
+
+    {# Autocomplete options for the ingredient_name text inputs (list="ingredient-options"). #}
+    <datalist id="ingredient-options">
+      {% for ingredient in ingredients %}
+        <option value="{{ ingredient.name }}"></option>
+      {% endfor %}
+    </datalist>
+  </section>
+
+  <div class="form-actions">
+    <a class="btn btn--secondary" href="{{ cancel_url }}">Cancel</a>
+    <button type="submit">Save recipe</button>
+  </div>
+</form>
+
+<script src="{% static 'js/recipe_form.js' %}" defer></script>

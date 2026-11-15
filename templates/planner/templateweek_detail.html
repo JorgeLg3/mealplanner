@@ -1,28 +1,31 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}{{ templateweek.name }} · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/planner.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>{{ templateweek.name }}</h1>
-  {% if templateweek.description %}
-    <p>{{ templateweek.description }}</p>
-  {% endif %}
+  <a class="back-link" href="{% url 'templateweek_list' %}">{% include "icons/chevron-left.svg" %}Back to templates</a>
+  <header class="page-header">
+    <div>
+      <h1>{{ templateweek.name }}</h1>
+      <p class="page-header__subtitle">
+        {{ meal_count }}/{{ slot_count }} meals{% if templateweek.description %} · {{ templateweek.description }}{% endif %}
+      </p>
+    </div>
+    <div class="page-header__actions">
+      {# Templates are applied from the planner ("Import template"). #}
+      <a class="btn btn--secondary" href="{% url 'planner_calendar' %}">{% include "icons/calendar.svg" %}Go to planner</a>
+    </div>
+  </header>
 
-  {# Mon–Sun grid; each cell is HTMX-swappable via _meal_cell.html. #}
-  <div class="week-grid">
-    {% for day in days %}
-      <div class="week-grid__day">{{ day.label }}</div>
-    {% endfor %}
-
-    {% for day in days %}
-      {% include "planner/_meal_cell.html" with templateweek_pk=templateweek.pk weekday=day.value meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
-    {% endfor %}
-
-    {% for day in days %}
-      {% include "planner/_meal_cell.html" with templateweek_pk=templateweek.pk weekday=day.value meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
-    {% endfor %}
+  {# Same .day/.slot layout as the planner; each slot is HTMX-swappable. #}
+  <div class="week-panel">
+    <div class="week-panel__scroll">
+      {% include "planner/_template_days.html" with days=days templateweek_pk=templateweek.pk %}
+    </div>
   </div>
 {% endblock %}

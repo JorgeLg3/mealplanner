@@ -1,15 +1,20 @@
-{# Mon–Sun grid of dates + lunch/dinner cells for one week. #}
-{# Context: days (list of {date, lunch, dinner}) #}
-<div class="week-grid">
+{# One week's days. Seven columns on desktop, a vertical list on phones. #}
+{# Context: days (list of {date, is_today, lunch, dinner}) #}
+<div class="week-days">
   {% for day in days %}
-    <div class="week-grid__date">{{ day.date|date:"j" }}</div>
-  {% endfor %}
-
-  {% for day in days %}
-    {% include "planner/_calendar_cell.html" with date=day.date meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
-  {% endfor %}
-
-  {% for day in days %}
-    {% include "planner/_calendar_cell.html" with date=day.date meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
+    <section class="day{% if day.is_today %} day--today{% endif %}"
+             id="day-{{ day.date|date:'Y-m-d' }}"
+             data-day="{{ day.date|date:'Y-m-d' }}"
+             aria-label="{{ day.date|date:'l, M j' }}">
+      <header class="day__header">
+        <span class="day__name">{{ day.date|date:"l" }}</span>
+        <span class="day__name day__name--short" aria-hidden="true">{{ day.date|date:"D" }}</span>
+        <span class="day__date">{{ day.date|date:"M j" }}</span>
+        <span class="day__date day__date--short" aria-hidden="true">{{ day.date|date:"j" }}</span>
+        {% if day.is_today %}<span class="day__today">Today</span>{% endif %}
+      </header>
+      {% include "planner/_calendar_cell.html" with date=day.date meal_type="lunch" meal_type_label="Lunch" meal=day.lunch %}
+      {% include "planner/_calendar_cell.html" with date=day.date meal_type="dinner" meal_type_label="Dinner" meal=day.dinner %}
+    </section>
   {% endfor %}
 </div>

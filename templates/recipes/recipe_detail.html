@@ -1,33 +1,78 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ recipe.name }} · Meal Planner{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/recipes.css' %}">
+{% endblock %}
 
 {% block content %}
-  <h1>{{ recipe.name }}</h1>
-  <p>Category: {{ recipe.category|default:"Uncategorized" }}</p>
-  <p>{{ recipe.description }}</p>
-  <p>Servings: {{recipe.servings}}</p>
+  <div class="recipe-detail__bar">
+    <a class="back-link" href="{% url 'recipe_list' %}">{% include "icons/chevron-left.svg" %}Back to recipes</a>
+    {% if user.is_authenticated %}
+      <div class="recipe-actions">
+        <a class="btn btn--secondary btn--sm" href="{% url 'recipe_update' recipe.pk %}">{% include "icons/pencil.svg" %}Edit</a>
+        <a class="btn btn--danger btn--sm" href="{% url 'recipe_delete' recipe.pk %}">{% include "icons/trash.svg" %}Delete</a>
+      </div>
+    {% endif %}
+  </div>
 
-  <h2>Ingredients</h2>
-  <ul>
-    {% for recipe_ingredient in recipe.recipeingredient_set.all %}
-      <li>
-        {% if recipe_ingredient.quantity%}
-          <span>{{ recipe_ingredient.quantity|floatformat }}</span>
+  {# Photo beside the title on desktop, above it on mobile; text-only without one. #}
+  <header class="recipe-hero{% if recipe.image %} recipe-hero--with-image{% endif %}">
+    {% if recipe.image %}
+      <img class="recipe-hero__image" src="{{ recipe.image.url }}" alt="{{ recipe.name }}">
+    {% endif %}
+    <div class="recipe-hero__text">
+      <h1>{{ recipe.name }}</h1>
+      <div class="recipe-hero__meta">
+        {% if recipe.category %}
+          <span class="badge">{{ recipe.category.name }}</span>
+        {% else %}
+          <span class="badge badge--neutral">Uncategorized</span>
         {% endif %}
-        {% if recipe_ingredient.unit %}
-          <span>{{ recipe_ingredient.unit}}</span>
+        <span class="recipe-hero__servings">{% include "icons/users.svg" %}Servings: {{ recipe.servings }}</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="recipe-detail">
+    <section class="recipe-detail__ingredients card" aria-labelledby="ingredients-title">
+      <h2 id="ingredients-title" class="recipe-detail__heading">{% include "icons/shopping-cart.svg" %}Ingredients</h2>
+      {% with rows=recipe.recipeingredient_set.all %}
+        {% if rows %}
+          {# Checkboxes are a cooking aid only: no name, nothing is saved. #}
+          <ul class="ingredient-list">
+            {% for recipe_ingredient in rows %}
+              <li>
+                <label class="ingredient-list__row">
+                  <input type="checkbox">
+                  <span class="ingredient-list__amount">{% if recipe_ingredient.quantity %}{{ recipe_ingredient.quantity|floatformat }}{% if recipe_ingredient.unit %} {{ recipe_ingredient.unit }}{% endif %}{% endif %}</span>
+                  <span class="ingredient-list__name">{{ recipe_ingredient.ingredient }}{% if recipe_ingredient.prep_note %}<span class="text-secondary"> – {{ recipe_ingredient.prep_note }}</span>{% endif %}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-secondary">No ingredients yet.</p>
         {% endif %}
-        <span>{{recipe_ingredient.ingredient}}</span> 
-        {% if recipe_ingredient.prep_note %}
-          <span>-</span>
-            <span>{{recipe_ingredient.prep_note}}</span>
-        {% endif %}
-      </li>
-    {% empty %}
-      <li>No ingredients yet.</li>
-    {% endfor %}
-  </ul>
+      {% endwith %}
+    </section>
+
+    <section class="recipe-detail__description" aria-label="Description">
+      {% if recipe.description %}
+        <div class="recipe-detail__text">{{ recipe.description|linebreaks }}</div>
+      {% else %}
+        <p class="text-secondary">No description yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {# Mobile: the same actions as large buttons at the end of the recipe. #}
   {% if user.is_authenticated %}
-    <a href="{% url 'recipe_update' recipe.pk %}">Edit</a>
-    <a href="{% url 'recipe_delete' recipe.pk %}">Delete</a>
+    <div class="recipe-actions recipe-actions--bottom">
+      <a class="btn btn--secondary" href="{% url 'recipe_update' recipe.pk %}">{% include "icons/pencil.svg" %}Edit</a>
+      <a class="btn btn--danger" href="{% url 'recipe_delete' recipe.pk %}">{% include "icons/trash.svg" %}Delete</a>
+    </div>
   {% endif %}
 {% endblock %}

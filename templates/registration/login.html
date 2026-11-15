@@ -1,8 +1,15 @@
-{% block title %}Log In{% endblock title %}
+{% extends "base.html" %}
+
+{% block title %}Log in · Meal Planner{% endblock title %}
+
 {% block content %}
-<h2>Log	In</h2>
-<form method="post">{% csrf_token %}
-  {{ form }}
-  <button type="submit">Log In</button>
-</form>
-{% endblock content	%}
+  <div class="auth-card">
+    <h1>Log in</h1>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Log in</button>
+    </form>
+    <p class="auth-card__switch">New here? <a href="{% url 'signup' %}">Create an account</a></p>
+  </div>
+{% endblock content %}

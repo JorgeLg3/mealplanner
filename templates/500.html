@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block title %}Something went wrong · Meal Planner{% endblock %}
+
 {% block content %}
-  <h1>Custom error 500 template</h1>
+  <div class="auth-card">
+    <h1>Something went wrong</h1>
+    <p class="text-muted">Please try again in a moment.</p>
+    <a href="/">Back home</a>
+  </div>
 {% endblock %}

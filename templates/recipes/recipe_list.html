@@ -1,22 +1,141 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Recipes · Meal Planner{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/recipes.css' %}">
+{% endblock %}
 
 {% block content %}
-  {% regroup recipe_list by category as category_groups %}
-  {% for group in category_groups %}
-    <section>
-      <h2>{{ group.grouper|default:"Uncategorized" }}</h2>
-      <ul>
-        {% for recipe in group.list %}
-          <li><a href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a></li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% empty %}
-    <p>No recipes yet.</p>
-  {% endfor %}
+  <header class="page-header">
+    <h1 class="page-title">{% include "icons/chef-hat.svg" %}Recipes</h1>
+    <div class="page-header__actions">
+      <a class="btn btn--secondary" href="{% url 'ingredient_list' %}">{% include "icons/list.svg" %}Ingredients</a>
+      {% if user.is_authenticated %}
+        <a class="btn btn--primary" href="{% url 'recipe_create' %}">{% include "icons/plus.svg" %}New recipe</a>
+      {% endif %}
+    </div>
+  </header>
 
-  <div>
-    <a href="{% url 'recipe_create' %}">New recipe</a>
-    <a href="{% url 'ingredient_list' %}">Ingredients</a>
+  {# Search + category filter. Works as a plain GET form; with HTMX it   #}
+  {# live-updates #recipe-browser (sidebar + results) without a reload. #}
+  {# The form itself sits outside the swapped region so typing keeps focus. #}
+  <form class="recipe-toolbar" method="get" action="{% url 'recipe_list' %}" role="search"
+        hx-get="{% url 'recipe_list' %}"
+        hx-trigger="input delay:250ms, change, submit"
+        hx-target="#recipe-browser"
+        hx-select="#recipe-browser"
+        hx-swap="outerHTML"
+        hx-push-url="true">
+    <label class="input-icon recipe-toolbar__search">
+      {% include "icons/search.svg" %}
+      <span class="visually-hidden">Search recipes</span>
+      <input type="search" name="q" value="{{ query }}" placeholder="Search recipes…" autocomplete="off">
+    </label>
+    {# On desktop the sidebar replaces this; it still carries the category into searches. #}
+    <label class="recipe-toolbar__category">
+      <span class="visually-hidden">Category</span>
+      <select name="category">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c.pk }}"{% if category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+        {% if uncategorized_count %}
+          <option value="none"{% if category == "none" %} selected{% endif %}>Uncategorized</option>
+        {% endif %}
+      </select>
+    </label>
+    <noscript><button type="submit">Search</button></noscript>
+  </form>
+
+  <div id="recipe-browser" class="recipe-browser">
+    <nav class="category-nav" aria-label="Recipe categories">
+      <a href="{% url 'recipe_list' %}{% if query %}?q={{ query|urlencode }}{% endif %}"
+         class="category-nav__item{% if not category %} is-active{% endif %}"
+         {% if not category %}aria-current="page"{% endif %}>
+        <span>All recipes</span><span class="category-nav__count">{{ total_count }}</span>
+      </a>
+      {% for c in categories %}
+        <a href="?category={{ c.pk }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+           class="category-nav__item{% if category == c.pk|stringformat:'s' %} is-active{% endif %}"
+           {% if category == c.pk|stringformat:'s' %}aria-current="page"{% endif %}>
+          <span>{{ c.name }}</span><span class="category-nav__count">{{ c.recipe_count }}</span>
+        </a>
+      {% endfor %}
+      {% if uncategorized_count %}
+        <a href="?category=none{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+           class="category-nav__item{% if category == 'none' %} is-active{% endif %}"
+           {% if category == 'none' %}aria-current="page"{% endif %}>
+          <span>Uncategorized</span><span class="category-nav__count">{{ uncategorized_count }}</span>
+        </a>
+      {% endif %}
+    </nav>
+
+    <div class="recipe-results">
+      {% if not total_count %}
+        <div class="empty-state">
+          <p class="empty-state__title">No recipes yet</p>
+          <p>Add the dishes you cook most and they'll show up here.</p>
+          {% if user.is_authenticated %}
+            <p><a class="btn btn--primary" href="{% url 'recipe_create' %}">{% include "icons/plus.svg" %}New recipe</a></p>
+          {% endif %}
+        </div>
+      {% elif not recipe_list and query %}
+        <div class="empty-state">
+          <p class="empty-state__title">No recipes match “{{ query }}”</p>
+          <p>Try a different word{% if category %} or look in all categories{% endif %}.</p>
+          <p><a class="btn btn--secondary" href="?{% if category %}category={{ category }}{% endif %}">Clear search</a></p>
+        </div>
+      {% elif not recipe_list %}
+        <div class="empty-state">
+          <p class="empty-state__title">Nothing in {{ selected_category.name|default:"this category" }} yet</p>
+          <p>Pick this category when you create or edit a recipe.</p>
+        </div>
+      {% else %}
+        {% regroup recipe_list by category as category_groups %}
+        {% for group in category_groups %}
+          <section class="recipe-group">
+            {# The heading is redundant when a single category is selected. #}
+            <h2 class="recipe-group__title{% if category %} visually-hidden{% endif %}">{{ group.grouper|default:"Uncategorized" }}</h2>
+            <ul class="recipe-cards">
+              {% for recipe in group.list %}
+                <li class="recipe-card">
+                  {# Same-size thumbnail slot either way so mixed lists stay aligned. #}
+                  {% if recipe.image %}
+                    <img class="recipe-card__thumb" src="{{ recipe.image.url }}" alt="" loading="lazy" width="88" height="88">
+                  {% else %}
+                    <div class="recipe-card__thumb recipe-card__thumb--empty" aria-hidden="true">{% include "icons/chef-hat.svg" %}</div>
+                  {% endif %}
+                  <div class="recipe-card__body">
+                    {# The title link stretches over the whole card. #}
+                    <h3 class="recipe-card__title"><a class="recipe-card__link" href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a></h3>
+                    <div class="recipe-card__meta">
+                      {% if recipe.category %}
+                        <span class="badge">{{ recipe.category.name }}</span>
+                      {% else %}
+                        <span class="badge badge--neutral">Uncategorized</span>
+                      {% endif %}
+                      <span>{{ recipe.servings }} serving{{ recipe.servings|pluralize }}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{{ recipe.ingredient_count }} ingredient{{ recipe.ingredient_count|pluralize }}</span>
+                    </div>
+                  </div>
+                  {% if user.is_authenticated %}
+                    <details class="menu recipe-card__menu">
+                      <summary class="btn icon-btn" aria-label="Actions for {{ recipe.name }}">{% include "icons/more.svg" %}</summary>
+                      <div class="menu__items">
+                        <a href="{% url 'recipe_update' recipe.pk %}">{% include "icons/pencil.svg" %}Edit</a>
+                        <a class="menu__danger" href="{% url 'recipe_delete' recipe.pk %}">{% include "icons/trash.svg" %}Delete</a>
+                      </div>
+                    </details>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endfor %}
+      {% endif %}
+    </div>
   </div>
 {% endblock %}

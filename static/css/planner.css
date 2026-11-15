@@ -1,248 +1,871 @@
-/* Planner app styles */
+/* Planner (meal calendar) + shared week visuals. Tokens from base.css only.
+   Mobile-first spec: sticky week bar with a day strip, days stacked
+   vertically; desktop: two week panels with seven columns each. */
 
-.week-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-  margin-top: 1rem;
+/* ==========================================================================
+   Week bar (label + prev/next; day strip on phones)
+   ========================================================================== */
+.planner-header {
+  margin-bottom: var(--space-6);
 }
 
-.week-grid__day {
-  font-weight: bold;
-  text-align: center;
-  padding: 0.5rem;
-  border-bottom: 2px solid #ccc;
+.week-bar {
+  margin-bottom: var(--space-6);
 }
 
-.week-grid__cell {
-  position: relative;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5rem;
-  min-height: 3.5rem;
-}
-
-.week-grid__recipe {
-  display: block;
-  /* Keep the name clear of the swap / remove buttons in the corner. */
-  padding-right: 2.5rem;
-  color: inherit;
-  text-decoration: none;
-}
-
-.week-grid__recipe:hover {
-  text-decoration: underline;
-  color: #4a90d9;
-}
-
-.week-grid__delete {
-  position: absolute;
-  top: 0.15rem;
-  right: 0.25rem;
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-}
-
-.week-grid__delete:hover {
-  color: #c0392b;
-}
-
-.week-grid__swap {
-  position: absolute;
-  top: 0.15rem;
-  right: 1.4rem;
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 0.9rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-}
-
-.week-grid__swap:hover {
-  color: #4a90d9;
-}
-
-.week-grid__add {
-  background: none;
-  border: 1px dashed #ccc;
-  border-radius: 3px;
-  color: #888;
-  cursor: pointer;
-  padding: 0.1rem 0.5rem;
-}
-
-.week-grid__add:hover {
-  color: #4a90d9;
-  border-color: #4a90d9;
-}
-
-.week-grid__form input[type="text"] {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 0.85rem;
-  padding: 0.2rem 0.3rem;
-}
-
-.week-grid__form-actions {
+.week-bar__nav {
   display: flex;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.week-grid__form-actions button {
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
+.week-bar__label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
 }
 
-.week-grid__error {
-  color: #c0392b;
-  font-size: 0.75rem;
-  margin: 0.25rem 0 0;
+.week-bar__range {
+  font-size: var(--text-md);
+  font-weight: 600;
 }
 
-.week-grid__meal-type {
-  display: block;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  margin-bottom: 0.25rem;
+.week-bar__today {
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
-.week-grid__empty {
-  color: #bbb;
+/* One chevron icon, flipped for "next". */
+.icon-btn--flip .icon {
+  transform: scaleX(-1);
 }
 
-/* Day-of-month number in the calendar cells */
-.week-grid__date {
-  text-align: right;
-  font-size: 0.85rem;
-  color: #555;
-  padding: 0.25rem 0.5rem;
+/* Desktop shows the day headers inside the grid instead. */
+.day-strip {
+  display: none;
 }
 
-/* Calendar (prev / current / next) */
-.week-grid--header {
-  margin-bottom: 0.25rem;
+/* ==========================================================================
+   Week panel
+   ========================================================================== */
+.week-panel-wrap + .week-panel-wrap {
+  margin-top: var(--space-6);
 }
 
-.week-section {
-  margin-bottom: 1.5rem;
-  opacity: 0.6;
+.week-panel {
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
 }
 
-.week-section--current {
-  opacity: 1;
-  padding: 1rem;
-  border: 2px solid #4a90d9;
-  border-radius: 6px;
+/* Current week: a delicate blue tint, not a heavy outline. */
+.week-panel--current {
+  border-color: rgb(57 123 183 / 0.35);
+  box-shadow: 0 0 0 3px rgb(57 123 183 / 0.06);
 }
 
-.week-section__month {
-  margin: 0 0 0.5rem;
+.week-panel__header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-/* Import / export action bar under each week */
+.week-panel__title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.week-panel__range {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Between tablet and wide desktop, the 7 columns scroll inside the panel
+   rather than squeezing recipe names. */
+.week-panel__scroll {
+  overflow-x: auto;
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 0 var(--space-2) var(--space-1);
+}
+
+/* ==========================================================================
+   Days and meal slots
+   ========================================================================== */
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(7.5rem, 1fr));
+  gap: var(--space-2);
+  min-width: 54rem;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.day__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1);
+}
+
+/* Desktop: "Mon" ... "9"; phones: "Monday" ... "Nov 9". */
+.day__name:not(.day__name--short),
+.day__date:not(.day__date--short),
+.day__today {
+  display: none;
+}
+
+.day__name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.day__date {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.day--today .day__name,
+.day--today .day__date {
+  color: var(--color-primary-text);
+}
+
+.day--today .day__date--short {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+}
+
+.slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 5.75rem;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.slot--empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.slot--editing {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* Label row (LUNCH / DINNER) with the actions on its right. */
+.slot__label {
+  min-height: var(--control-height-sm);
+  display: flex;
+  align-items: center;
+  padding-right: 4rem;
+}
+
+.slot__recipe {
+  color: var(--color-text);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: break-word; /* long words only; no letter-by-letter wrapping */
+  hyphens: auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.slot__recipe:hover {
+  color: var(--color-primary-hover);
+}
+
+.slot__actions {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: flex;
+}
+
+.slot__action.icon-btn {
+  width: 1.875rem;
+  min-height: 1.875rem;
+}
+
+.slot__action .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.slot__action--remove:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+/* Pointer devices: actions recede until the slot is hovered or focused.
+   Touch devices (no hover) always see them at full strength. */
+@media (hover: hover) {
+  .slot__actions {
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease);
+  }
+
+  .slot:hover .slot__actions,
+  .slot:focus-within .slot__actions {
+    opacity: 1;
+  }
+
+  .slot--filled:hover {
+    border-color: var(--color-border-strong);
+  }
+}
+
+.slot__add,
+button.slot__add {
+  align-self: center;
+  margin: auto 0;
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.slot__add:hover,
+button.slot__add:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary-text);
+}
+
+.slot__add .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.slot__add-long {
+  display: none;
+}
+
+.slot__none {
+  color: var(--color-text-placeholder);
+}
+
+.slot__form input[type="text"] {
+  width: 100%;
+  min-height: var(--control-height-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.slot__form .field__error {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.slot__form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+/* ==========================================================================
+   Week toolbar + inline template forms
+   ========================================================================== */
 .week-actions {
+  margin-top: var(--space-5);
+}
+
+.week-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--space-2);
+}
+
+.week-toolbar__templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.week-toolbar__export {
+  margin-left: auto;
+}
+
+.week-toolbar__menu {
+  display: none;
 }
 
 .week-actions__form {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-end;
+  gap: var(--space-2);
 }
 
-.week-actions__message {
-  margin: 0;
-  color: #2e7d32;
+.week-actions__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: min(18rem, 100%);
 }
 
-.week-actions__error {
-  margin: 0;
-  color: #c0392b;
+/* Menus near the bottom of the screen open upwards. */
+.menu__items--up {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+  min-width: 13rem;
 }
 
-/* Shopping-list preview: native modal <dialog>, near full-screen on phones. */
-.shopping-dialog {
-  width: min(32rem, 100vw - 2rem);
-  max-height: calc(100vh - 2rem);
-  padding: 1rem;
-  border: none;
-  border-radius: 6px;
-  box-sizing: border-box;
+/* ==========================================================================
+   Shopping-list dialog
+   ========================================================================== */
+.shopping-dialog__title {
+  font-size: var(--text-lg);
 }
 
-.shopping-dialog::backdrop {
-  background: rgb(0 0 0 / 0.4);
+.shopping-dialog__fields {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0 var(--space-3);
 }
 
-.shopping-dialog__form > label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.shopping-dialog__form input[type="text"],
-.shopping-dialog__form input[type="date"] {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
+.shopping-dialog__fields .field__help {
+  font-weight: 400;
 }
 
 .shopping-dialog__group {
-  border: none;
+  margin: var(--space-4) 0 0;
   padding: 0;
-  margin: 0.75rem 0;
+  border: none;
 }
 
 .shopping-dialog__group legend {
-  font-weight: bold;
   padding: 0;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .shopping-dialog__item {
-  display: block;
-  padding: 0.2rem 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.5rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-base);
+  font-weight: 400;
+}
+
+.shopping-dialog__item:has(input:not(:checked)) {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
 }
 
 .shopping-dialog__actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-6));
   display: flex;
-  gap: 0.5rem;
   justify-content: flex-end;
-  margin-top: 1rem;
+  gap: var(--space-2);
+  margin: var(--space-6) calc(-1 * var(--space-6)) calc(-1 * var(--space-6));
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }
 
-/* Template list: one collapsible read-only preview per template. */
-.template-preview {
-  border-bottom: 1px solid #eee;
-  padding: 0.5rem 0;
+/* ==========================================================================
+   Templates: list rows with a read-only preview, and the template page.
+   Days and slots reuse the planner's .day/.slot components.
+   ========================================================================== */
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.template-preview summary {
+.template-row {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.template-row[open] {
+  border-color: var(--color-border-strong);
+}
+
+.template-row__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
   cursor: pointer;
+  border-radius: var(--radius-card);
 }
 
-.template-preview__name {
-  font-weight: bold;
+.template-row__summary::-webkit-details-marker {
+  display: none;
 }
 
-.template-preview__count,
-.template-preview__description {
-  color: #666;
+.template-row__summary:hover {
+  background: var(--color-surface-sunken);
 }
 
-.template-preview .week-grid {
-  margin-bottom: 0.5rem;
+.template-row__chevron {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  transform: rotate(-90deg);
+  transition: transform var(--duration) var(--ease);
+}
+
+.template-row[open] .template-row__chevron {
+  transform: rotate(0deg);
+}
+
+.template-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.template-row__name {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.template-row__count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.template-row__description {
+  flex-basis: 100%;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-row__open {
+  color: var(--color-primary-text);
+}
+
+.template-row__preview {
+  padding: 0 var(--space-4) var(--space-4);
+  animation: menu-in var(--duration) var(--ease);
+}
+
+/* Template days have no dates: the weekday name is the whole header. */
+.week-days--template .day__header {
+  justify-content: center;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day__slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Read-only slots: same shape, quieter, and empty ones clearly not buttons. */
+.slot--readonly {
+  min-height: 4.5rem;
+}
+
+.slot--readonly.slot--empty {
+  background: var(--color-surface-sunken);
+  border: 1px solid transparent;
+}
+
+.slot--readonly .slot__label {
+  padding-right: 0;
+}
+
+.slot--readonly .slot__none {
+  font-size: var(--text-sm);
+}
+
+/* ==========================================================================
+   Phones (main device)
+   ========================================================================== */
+@media (max-width: 720px) {
+  .planner-header {
+    margin-bottom: var(--space-3);
+  }
+
+  /* Sticky week bar: range + arrows, then the Mon–Sun strip. */
+  .week-bar {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    margin: 0 calc(-1 * var(--gutter)) var(--space-4);
+    padding: var(--space-2) var(--gutter) var(--space-3);
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .week-bar__nav {
+    justify-content: space-between;
+  }
+
+  .week-bar__label {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .week-bar__nav .icon-btn {
+    width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .day-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+  }
+
+  .day-strip__day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 3.25rem;
+    padding: var(--space-1) 0;
+    border-radius: var(--radius-button);
+    color: var(--color-text-secondary);
+    transition:
+      background-color var(--duration-fast) var(--ease),
+      color var(--duration-fast) var(--ease);
+  }
+
+  .day-strip__name {
+    font-size: var(--text-2xs);
+    font-weight: 500;
+  }
+
+  .day-strip__date {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .day-strip__day.is-today .day-strip__date {
+    color: var(--color-primary-text);
+  }
+
+  .day-strip__day.is-active {
+    background: var(--color-primary-light);
+    color: var(--color-primary-text);
+  }
+
+  .day-strip__day.is-active .day-strip__date {
+    color: var(--color-primary-text);
+  }
+
+  /* Only the selected week; the arrows move between weeks. */
+  .week-panel-wrap--next {
+    display: none;
+  }
+
+  .week-panel {
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .week-panel__header {
+    display: none; /* the sticky bar already shows the range */
+  }
+
+  .week-panel__scroll {
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Days stack vertically, each as its own card. */
+  .week-days {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+
+  .day {
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    /* Land below the sticky bar when scrolled to. */
+    scroll-margin-top: 9rem;
+  }
+
+  .day--today {
+    border-color: rgb(57 123 183 / 0.35);
+  }
+
+  .day__header {
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  .day__name--short,
+  .day__date--short {
+    display: none;
+  }
+
+  .day__name:not(.day__name--short),
+  .day__date:not(.day__date--short),
+  .day__today {
+    display: inline;
+  }
+
+  .day__name {
+    font-size: var(--text-md);
+  }
+
+  .day__date {
+    font-size: var(--text-md);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .day--today .day__name,
+  .day--today .day__date {
+    color: var(--color-text);
+  }
+
+  .day__today {
+    margin-left: auto;
+    padding: 0.125rem var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--color-primary-light);
+    color: var(--color-primary-text);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .slot {
+    min-height: 0;
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+
+  .slot__recipe {
+    font-size: var(--text-md);
+    -webkit-line-clamp: 2;
+  }
+
+  .slot__action.icon-btn {
+    width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .slot__action .icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .slot__label {
+    padding-right: 5.5rem;
+  }
+
+  /* Empty slot: a full-width, light blue "Add meal". */
+  .slot--empty {
+    padding: var(--space-2);
+    border: none;
+  }
+
+  /* The button names the meal ("Add lunch"), so the label is redundant. */
+  .slot--empty .slot__label {
+    display: none;
+  }
+
+  .slot__add,
+  button.slot__add {
+    align-self: stretch;
+    min-height: 3rem;
+    margin: 0;
+    background: rgb(220 236 248 / 0.45);
+    border: 1px solid var(--color-primary-light);
+    color: var(--color-primary-text);
+    font-weight: 600;
+  }
+
+  .slot__add-long {
+    display: inline;
+  }
+
+  .slot__form input[type="text"] {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .slot__form-actions button {
+    flex: 1;
+  }
+
+  /* Toolbar: full-width Export + a menu for the template actions. */
+  .week-actions {
+    margin-top: var(--space-6);
+  }
+
+  .week-toolbar {
+    flex-wrap: nowrap;
+  }
+
+  .week-toolbar__templates {
+    display: none;
+  }
+
+  .week-toolbar__export {
+    flex: 1;
+    margin-left: 0;
+    min-height: 3rem;
+  }
+
+  .week-toolbar__menu {
+    display: block;
+  }
+
+  .week-toolbar__menu > summary {
+    width: 3rem;
+    min-height: 3rem;
+    padding: 0;
+  }
+
+  .week-actions__form,
+  .week-actions__form > * {
+    width: 100%;
+  }
+
+  .week-actions__form button {
+    flex: 1;
+  }
+
+  .shopping-dialog {
+    width: 100vw;
+    max-width: none;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding: var(--space-5) var(--space-4) var(--space-4);
+  }
+
+  .shopping-dialog__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shopping-dialog__actions {
+    margin-inline: calc(-1 * var(--space-4));
+    margin-bottom: calc(-1 * var(--space-4));
+    padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  }
+
+  .shopping-dialog__actions button {
+    flex: 1;
+  }
+
+  /* Templates: cards with a full-width Open; previews list days compactly. */
+  .template-row__summary {
+    flex-wrap: wrap;
+    padding: var(--space-4);
+  }
+
+  .template-row__description {
+    white-space: normal;
+  }
+
+  .template-row__open {
+    flex-basis: 100%;
+    min-height: 2.75rem;
+    background: var(--color-primary-light);
+    border-color: var(--color-primary-light);
+  }
+
+  .template-row__preview {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+
+  .week-days--template {
+    gap: var(--space-2);
+  }
+
+  .week-days--template .day {
+    padding: var(--space-3);
+    scroll-margin-top: 0;
+  }
+
+  .week-days--template .day__header {
+    justify-content: flex-start;
+    border-bottom: none;
+  }
+
+  /* Lunch and dinner side by side: a whole week fits on a phone screen. */
+  .week-days--template .day__slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .week-days--template .slot__label {
+    padding-right: 0;
+  }
+
+  .week-days--template .slot--filled:not(.slot--readonly) .slot__label {
+    padding-right: 5.5rem;
+  }
+
+  .week-days--template .slot__recipe {
+    font-size: var(--text-base);
+  }
+
+  /* Keep the meal name visible on empty template slots (two per row). */
+  .week-days--template .slot--empty .slot__label {
+    display: flex;
+  }
+
+  .week-days--template .slot__add-long {
+    display: none;
+  }
+
+  .week-days--template .slot__add,
+  .week-days--template button.slot__add {
+    min-height: 2.5rem;
+  }
 }

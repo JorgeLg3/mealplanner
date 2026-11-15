@@ -1,34 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}New recipe · Meal Planner{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/recipes.css' %}">
+{% endblock %}
+
 {% block content %}
-<h1>New recipe</h1>
-  <form action="" method="post">{% csrf_token %}
-    {{ form }}
-
-    <h2>Ingredients</h2>
-    {{ ingredient_formset.management_form }}
-    <div id="ingredient-forms" data-prefix="{{ ingredient_formset.prefix }}">
-      {% for ingredient_form in ingredient_formset %}
-        <div class="ingredient-form">{{ ingredient_form.as_p }}</div>
-      {% endfor %}
-    </div>
-
-    {# Blueprint row (not submitted): its __prefix__ placeholder is swapped for a real index by JS. #}
-    <template id="empty-ingredient-form">
-      <div class="ingredient-form">{{ ingredient_formset.empty_form.as_p }}</div>
-    </template>
-    <button type="button" id="add-ingredient">Add ingredient</button>
-
-    {# Autocomplete options for the ingredient_name text inputs (list="ingredient-options"). #}
-    <datalist id="ingredient-options">
-      {% for ingredient in ingredients %}
-        <option value="{{ ingredient.name }}"></option>
-      {% endfor %}
-    </datalist>
-
-    <input type="submit" value="Save">
-  </form>
-
-  <script src="{% static 'js/recipe_form.js' %}" defer></script>
+  <a class="back-link" href="{% url 'recipe_list' %}">{% include "icons/chevron-left.svg" %}Back to recipes</a>
+  <header class="page-header">
+    <h1>New recipe</h1>
+  </header>
+  {% url 'recipe_list' as cancel_url %}
+  {% include "recipes/_recipe_form.html" with cancel_url=cancel_url %}
 {% endblock %}

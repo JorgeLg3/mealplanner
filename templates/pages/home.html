@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1>Welcome to TheJorgeLab Blog</h1>
+  <section class="home-intro">
+    <h1>{% if user.is_authenticated %}Hi {{ user.username }}{% else %}Hi there{% endif %}</h1>
+    <p>Sort out the week's meals, keep the recipes handy, and get the shopping list done.</p>
+  </section>
+
+  <ul class="home-index">
+    <li>
+      <a href="{% url 'planner_calendar' %}">
+        <span class="home-index__title">Planner</span>
+        <span class="home-index__desc">This week and next</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'templateweek_list' %}">
+        <span class="home-index__title">Templates</span>
+        <span class="home-index__desc">Reusable weeks</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'recipe_list' %}">
+        <span class="home-index__title">Recipes</span>
+        <span class="home-index__desc">Everything we cook</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'todo_list' %}">
+        <span class="home-index__title">Todos</span>
+        <span class="home-index__desc">House tasks and shopping lists</span>
+      </a>
+    </li>
+  </ul>
 {% endblock %}

@@ -2,11 +2,14 @@ import datetime
 from collections import Counter
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django.views.generic import (
+    CreateView,
     ListView,
     DetailView,
     TemplateView,
@@ -39,7 +42,7 @@ def monday_of(date):
 class TemplateWeekList(ListView):
     model = TemplateWeek
     template_name = "planner/templateweek_list.html"
-    queryset = TemplateWeek.objects.prefetch_related("meals__recipe")
+    queryset = TemplateWeek.objects.order_by("name").prefetch_related("meals__recipe")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -53,6 +56,18 @@ class TemplateWeekList(ListView):
         return context
 
 
+class TemplateWeekCreate(LoginRequiredMixin, CreateView):
+    """Start an empty template by name; meals are filled in on its page.
+    (Templates can also be created from a planner week: "Save as new".)"""
+
+    model = TemplateWeek
+    fields = ["name", "description"]
+    template_name = "planner/templateweek_form.html"
+
+    def get_success_url(self):
+        return reverse("templateweek_detail", args=[self.object.pk])
+
+
 class TemplateWeekDetail(DetailView):
     model = TemplateWeek
     template_name = "planner/templateweek_detail.html"
@@ -60,7 +75,10 @@ class TemplateWeekDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["days"] = build_days(self.object.meals.all())
+        meals = list(self.object.meals.all())
+        context["days"] = build_days(meals)
+        context["meal_count"] = len(meals)
+        context["slot_count"] = len(Weekday) * len(MealType)
         return context
 
 
@@ -72,6 +90,7 @@ def _cell_context(templateweek, weekday, meal_type, meal=None):
     return {
         "templateweek_pk": templateweek.pk,
         "weekday": weekday,
+        "weekday_label": Weekday(weekday).label if weekday in Weekday.values else "",
         "meal_type": meal_type,
         "meal_type_label": _meal_label(meal_type),
         "meal": meal,
@@ -165,48 +184,28 @@ def templatemeal(request, pk, weekday, meal_type):
 
 
 class PlannerCalendar(TemplateView):
+    """The selected week (``?week=`` any ISO date; defaults to this week) and
+    the one after it. Phones show only the first; desktop shows both."""
+
     template_name = "planner/calendar.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         this_monday = monday_of(datetime.date.today())
-        mondays = [this_monday + datetime.timedelta(weeks=offset) for offset in (0, 1)]
-        range_start = mondays[0]
-        range_end = mondays[-1] + datetime.timedelta(days=6)
+        try:
+            selected = monday_of(datetime.date.fromisoformat(self.request.GET["week"]))
+        except KeyError, ValueError:
+            selected = this_monday
+        mondays = [selected, selected + datetime.timedelta(weeks=1)]
 
-        # One query covers the whole visible window; bucket by (date, meal_type)
-        # so each cell is an O(1) dict lookup.
-        meals_by_slot = {
-            (m.date, m.meal_type): m
-            for m in CalendarMeal.objects.filter(
-                date__range=(range_start, range_end)
-            ).select_related("recipe")
-        }
-
-        context["weekday_labels"] = [day.label for day in Weekday]
-
-        weeks = []
-        for monday in mondays:
-            days = []
-            for offset in range(7):
-                date = monday + datetime.timedelta(days=offset)
-                days.append(
-                    {
-                        "date": date,
-                        "lunch": meals_by_slot.get((date, MealType.LUNCH)),
-                        "dinner": meals_by_slot.get((date, MealType.DINNER)),
-                    }
-                )
-            weeks.append(
-                {
-                    "start_date": monday,
-                    "is_current": monday == this_monday,
-                    "days": days,
-                }
-            )
-
-        context["weeks"] = weeks
+        context["weeks"] = [
+            {"monday": monday, "days": _week_days(monday)} for monday in mondays
+        ]
+        context["selected_monday"] = selected
+        context["selected_sunday"] = selected + datetime.timedelta(days=6)
+        context["prev_monday"] = selected - datetime.timedelta(weeks=1)
+        context["next_monday"] = selected + datetime.timedelta(weeks=1)
+        context["this_monday"] = this_monday
         context["templates"] = TemplateWeek.objects.order_by("name")
         return context
 
@@ -328,9 +327,11 @@ def _week_days(monday):
         (m.date, m.meal_type): m
         for m in CalendarMeal.objects.filter(date__in=dates).select_related("recipe")
     }
+    today = datetime.date.today()
     return [
         {
             "date": date,
+            "is_today": date == today,
             "lunch": meals_by_slot.get((date, MealType.LUNCH)),
             "dinner": meals_by_slot.get((date, MealType.DINNER)),
         }
@@ -338,7 +339,9 @@ def _week_days(monday):
     ]
 
 
-def _render_week(request, monday, action=None, message="", error="", **extra):
+def _render_week(
+    request, monday, action=None, message="", error="", message_link=None, **extra
+):
     """Re-render one week's whole region (grid + action bar). Every
     import/export endpoint returns this so a single #week-<monday> swap keeps
     the meals and the action bar in sync."""
@@ -350,7 +353,9 @@ def _render_week(request, monday, action=None, message="", error="", **extra):
             "days": _week_days(monday),
             "action": action,
             "message": message,
+            "message_link": message_link,
             "error": error,
+            "this_monday": monday_of(datetime.date.today()),
             "templates": TemplateWeek.objects.order_by("name"),
             **extra,
         },
@@ -558,6 +563,7 @@ def week_export_shopping_list(request, monday):
         request,
         monday,
         message=f"Saved “{todo.name}” with {len(selected)} items.",
+        message_link={"url": reverse("todo_list"), "label": "View todos"},
     )
 
 

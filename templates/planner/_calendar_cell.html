@@ -1,28 +1,40 @@
 {# A single calendar slot (filled or empty), swappable via HTMX. #}
-{# Context: date, meal_type, meal_type_label, meal (CalendarMeal or None) #}
-<div class="week-grid__cell" id="cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}">
-  <span class="week-grid__meal-type">{{ meal_type_label }}</span>
+{# Empty: only "Add meal". Filled: the recipe (tap to view) plus always-visible #}
+{# Replace / Remove buttons, so nothing depends on hover.                      #}
+{# Context: date, meal_type, meal_type_label, meal (CalendarMeal or None)      #}
+{% with slot_id=date|date:'Y-m-d'|add:"-"|add:meal_type %}
+<div class="slot{% if meal %} slot--filled{% else %} slot--empty{% endif %}" id="cell-{{ slot_id }}">
+  <span class="label slot__label">{{ meal_type_label }}</span>
   {% if meal %}
+    <a class="slot__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+    {% if user.is_authenticated %}
+      <div class="slot__actions">
+        <button type="button"
+                class="icon-btn slot__action"
+                aria-label="Replace {{ meal_type_label|lower }} on {{ date|date:'l' }}"
+                title="Replace"
+                hx-get="{% url 'calendarmeal_form' date meal_type %}"
+                hx-target="#cell-{{ slot_id }}"
+                hx-swap="outerHTML">{% include "icons/pencil.svg" %}</button>
+        <button type="button"
+                class="icon-btn slot__action slot__action--remove"
+                aria-label="Remove {{ meal_type_label|lower }} on {{ date|date:'l' }}"
+                title="Remove"
+                hx-delete="{% url 'calendarmeal' date meal_type %}"
+                hx-target="#cell-{{ slot_id }}"
+                hx-swap="outerHTML"
+                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>{% include "icons/x.svg" %}</button>
+      </div>
+    {% endif %}
+  {% elif user.is_authenticated %}
     <button type="button"
-            class="week-grid__delete"
-            aria-label="Remove meal"
-            hx-delete="{% url 'calendarmeal' date meal_type %}"
-            hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
-            hx-swap="outerHTML"
-            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>×</button>
-    <button type="button"
-            class="week-grid__swap"
-            aria-label="Swap meal"
-            title="Swap meal"
+            class="slot__add"
+            aria-label="Add {{ meal_type_label|lower }} on {{ date|date:'l' }}"
             hx-get="{% url 'calendarmeal_form' date meal_type %}"
-            hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
-            hx-swap="outerHTML">✎</button>
-    <a class="week-grid__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+            hx-target="#cell-{{ slot_id }}"
+            hx-swap="outerHTML">{% include "icons/plus.svg" %}<span>Add<span class="slot__add-long"> {{ meal_type_label|lower }}</span></span></button>
   {% else %}
-    <button type="button"
-            class="week-grid__add"
-            hx-get="{% url 'calendarmeal_form' date meal_type %}"
-            hx-target="#cell-{{ date|date:'Y-m-d' }}-{{ meal_type }}"
-            hx-swap="outerHTML">+</button>
+    <span class="slot__none">—</span>
   {% endif %}
 </div>
+{% endwith %}
