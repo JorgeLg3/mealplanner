@@ -638,6 +638,11 @@ label {
   color: var(--color-error-text);
 }
 
+.notice--info {
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+}
+
 .notice a {
   color: inherit;
   font-weight: 600;
@@ -655,6 +660,13 @@ label {
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: var(--shadow-md);
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .dialog::backdrop {

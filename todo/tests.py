@@ -613,7 +613,8 @@ class RecurringFlowTests(TestCase):
     def test_todo_row_shows_recurring_badge(self):
         self._weekly()
         response = self.client.get(reverse("todo_list"))
-        self.assertContains(response, "↻ Every week")
+        self.assertContains(response, "Every week")
+        self.assertContains(response, 'class="todo__recurring"')
 
     def test_rejects_every_zero(self):
         response = self.client.post(
@@ -633,3 +634,46 @@ class RecurringFlowTests(TestCase):
         ]:
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 302)
+
+
+class TodoLayoutTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+
+    def test_tabs_mark_the_current_view(self):
+        for name, label in [
+            ("todo_list", "All"),
+            ("todo_done", "Show done"),
+            ("recurring_list", "Recurring"),
+        ]:
+            with self.subTest(view=name):
+                response = self.client.get(reverse(name))
+                self.assertContains(
+                    response,
+                    f'<a class="tabs__tab is-active" href="{reverse(name)}" aria-current="page">{label}</a>',
+                    html=True,
+                )
+
+    def test_primary_action_per_view(self):
+        self.assertContains(self.client.get(reverse("todo_list")), "New todo")
+        self.assertContains(
+            self.client.get(reverse("recurring_list")), "New recurring todo"
+        )
+
+    def test_empty_states(self):
+        self.assertContains(self.client.get(reverse("todo_list")), "Nothing to do")
+        self.assertContains(self.client.get(reverse("todo_done")), "Nothing done yet")
+        self.assertContains(
+            self.client.get(reverse("recurring_list")), "No recurring todos yet"
+        )
+
+    def test_overdue_date_has_text_not_only_colour(self):
+        Todo.objects.create(
+            name="Late", due_date=datetime.date.today() - datetime.timedelta(days=2)
+        )
+        response = self.client.get(reverse("todo_list"))
+        self.assertContains(response, '<span class="visually-hidden">Overdue: </span>')
+        self.assertContains(response, "todo-group--overdue")

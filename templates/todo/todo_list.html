@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Todos · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/todo.css' %}">
 {% endblock %}
@@ -8,14 +10,7 @@
 {% block content %}
   {# hx-headers sits on the wrapper so rows and the dialog both inherit the CSRF token. #}
   <div class="todos" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <h1>Todos</h1>
-    <div class="todos__toolbar">
-      {% if user.is_authenticated %}
-        <button type="button" hx-get="{% url 'todo_create' %}" hx-target="#todo-dialog">New todo</button>
-      {% endif %}
-      <a href="{% url 'todo_done' %}">Show done</a>
-      <a href="{% url 'recurring_list' %}">Recurring</a>
-    </div>
+    {% include "todo/_todo_header.html" with active="all" primary="todo" %}
 
     {% include "todo/_todo_list.html" %}
 

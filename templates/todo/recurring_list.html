@@ -1,33 +1,43 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Recurring · Todos · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/todo.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>Recurring todos</h1>
-  <div class="todos__toolbar">
-    {% if user.is_authenticated %}<a href="{% url 'recurring_create' %}">New recurring todo</a>{% endif %}
-    <a href="{% url 'todo_list' %}">Back to todos</a>
-  </div>
+  {% include "todo/_todo_header.html" with active="recurring" primary="recurring" %}
 
-  <ul class="todo-list recurring-list">
-    {% for recurring in recurringtodo_list %}
-      <li class="recurring">
-        <span class="todo__name">{{ recurring.name }}</span>
-        <span class="todo__recurring">↻ {{ recurring.schedule_label }}</span>
-        <span class="todo__due">
-          Next: {{ recurring.next_due|date:"D j M Y"|default:"—" }}
-          · Last done: {{ recurring.last_done|date:"D j M Y"|default:"never" }}
-        </span>
-        {% if user.is_authenticated %}
-          <a href="{% url 'recurring_update' recurring.pk %}">Edit</a>
-          <a href="{% url 'recurring_delete' recurring.pk %}">Delete</a>
-        {% endif %}
-      </li>
-    {% empty %}
-      <li>No recurring todos yet.</li>
-    {% endfor %}
-  </ul>
+  {% if recurringtodo_list %}
+    <ul class="recurring-list">
+      {% for recurring in recurringtodo_list %}
+        <li class="recurring">
+          <div class="recurring__main">
+            <span class="recurring__name">{{ recurring.name }}</span>
+            <span class="recurring__meta">
+              <span class="todo__recurring">{% include "icons/repeat.svg" %}{{ recurring.schedule_label }}</span>
+              <span>Next: {{ recurring.next_due|date:"D j M Y"|default:"—" }}</span>
+              <span>Last done: {{ recurring.last_done|date:"D j M Y"|default:"never" }}</span>
+            </span>
+          </div>
+          {% if user.is_authenticated %}
+            <div class="recurring__actions">
+              <a class="btn btn--secondary btn--sm" href="{% url 'recurring_update' recurring.pk %}">{% include "icons/pencil.svg" %}Edit</a>
+              <a class="btn btn--danger btn--sm" href="{% url 'recurring_delete' recurring.pk %}" aria-label="Delete {{ recurring.name }}">{% include "icons/trash.svg" %}<span class="recurring__delete-label">Delete</span></a>
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">
+      <p class="empty-state__title">No recurring todos yet</p>
+      <p>Bins every Monday, the water filter every 3 months: set it once and the next one appears when you tick the current one.</p>
+      {% if user.is_authenticated %}
+        <p><a class="btn btn--primary" href="{% url 'recurring_create' %}">{% include "icons/plus.svg" %}New recurring todo</a></p>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}

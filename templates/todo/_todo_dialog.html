@@ -2,7 +2,7 @@
 {# returns an empty body (removing the dialog) plus an out-of-band swap of #}
 {# the list (create) or the row (edit). On errors it re-renders this.      #}
 {# Context: form, todo (None when creating) #}
-<dialog class="todo-dialog" id="todo-dialog-modal">
+<dialog class="dialog todo-dialog" id="todo-dialog-modal" aria-labelledby="todo-dialog-title">
   <form class="todo-dialog__form"
         {% if todo %}
           hx-post="{% url 'todo_edit' todo.pk %}"
@@ -11,18 +11,18 @@
         {% endif %}
         hx-target="#todo-dialog">
     {% csrf_token %}
-    <h2>{% if todo %}Edit todo{% else %}New todo{% endif %}</h2>
+    <h2 id="todo-dialog-title" class="todo-dialog__title">{% if todo %}Edit todo{% else %}New todo{% endif %}</h2>
     {{ form.non_field_errors }}
     {% for field in form %}
-      <div class="todo-dialog__field">
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span class="text-secondary">(optional)</span>{% endif %}</label>
         {{ field }}
-        {% if field.errors %}<p class="todo-dialog__error">{{ field.errors|join:" " }}</p>{% endif %}
+        {% if field.errors %}<p class="field__error">{{ field.errors|join:" " }}</p>{% endif %}
       </div>
     {% endfor %}
-    <div class="todo-dialog__actions">
-      <button type="submit">{% if todo %}Save{% else %}Create{% endif %}</button>
-      <button type="button" onclick="this.closest('dialog').close()">Cancel</button>
+    <div class="dialog__actions">
+      <button type="button" class="btn--ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button type="submit">{% if todo %}Save{% else %}Create todo{% endif %}</button>
     </div>
   </form>
 </dialog>

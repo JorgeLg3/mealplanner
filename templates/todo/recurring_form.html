@@ -1,27 +1,58 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}New recurring todo{% endif %} · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/todo.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>{% if object %}Edit recurring todo{% else %}New recurring todo{% endif %}</h1>
-  <form method="post" class="recurring-form">
+  <a class="back-link" href="{% url 'recurring_list' %}">{% include "icons/chevron-left.svg" %}Back to recurring</a>
+  <header class="page-header">
+    <h1>{% if object %}Edit recurring todo{% else %}New recurring todo{% endif %}</h1>
+  </header>
+
+  <form method="post" class="panel form-narrow recurring-form">
     {% csrf_token %}
     {{ form.non_field_errors }}
-    {% for field in form %}
-      <div class="todo-dialog__field">
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-        {% if field.errors %}<p class="todo-dialog__error">{{ field.errors|join:" " }}</p>{% endif %}
-      </div>
-    {% endfor %}
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}<p class="field__error">{{ form.name.errors|join:" " }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="{{ form.description.id_for_label }}">Description <span class="text-secondary">(optional)</span></label>
+      {{ form.description }}
+      {% if form.description.errors %}<p class="field__error">{{ form.description.errors|join:" " }}</p>{% endif %}
+    </div>
+
+    {# "Every [2] [weeks]" reads as one sentence. #}
+    <fieldset class="recurring-form__every">
+      <legend>Repeats</legend>
+      <span class="recurring-form__word" aria-hidden="true">Every</span>
+      <label class="visually-hidden" for="{{ form.every.id_for_label }}">Every how many</label>
+      {{ form.every }}
+      <label class="visually-hidden" for="{{ form.unit.id_for_label }}">Unit</label>
+      {{ form.unit }}
+      {% if form.every.errors %}<p class="field__error">{{ form.every.errors|join:" " }}</p>{% endif %}
+      {% if form.unit.errors %}<p class="field__error">{{ form.unit.errors|join:" " }}</p>{% endif %}
+    </fieldset>
+
+    <div class="field">
+      <label for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
+      {{ form.start_date }}
+      <span class="field__help">Later occurrences keep this rhythm, e.g. a Monday start stays on Mondays.</span>
+      {% if form.start_date.errors %}<p class="field__error">{{ form.start_date.errors|join:" " }}</p>{% endif %}
+    </div>
+
     {% if object %}
-      <p class="todo__due">Changes apply to the open todo. Changing the schedule moves its due date to the first occurrence from today; done todos are kept as they are.</p>
+      <p class="notice notice--info">Changes apply to the open todo. Changing the schedule moves its due date to the first occurrence from today; done todos are kept as they are.</p>
     {% endif %}
-    <button type="submit">Save</button>
-    <a href="{% url 'recurring_list' %}">Cancel</a>
+
+    <div class="form-actions">
+      <a class="btn btn--secondary" href="{% url 'recurring_list' %}">Cancel</a>
+      <button type="submit">Save</button>
+    </div>
   </form>
 {% endblock %}

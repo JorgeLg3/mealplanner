@@ -1,202 +1,566 @@
+/* Todos. Tokens from base.css only. Mobile-first: rows are touch-sized
+   everywhere; wider screens just get more breathing room. */
+
+/* ==========================================================================
+   Tabs (All / Show done / Recurring)
+   ========================================================================== */
+.todo-header {
+  margin-bottom: var(--space-5);
+}
+
+.tabs {
+  display: inline-flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-6);
+  padding: var(--space-1);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-input);
+}
+
+.tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-button);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.tabs__tab:hover {
+  color: var(--color-text);
+}
+
+.tabs__tab.is-active {
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   Groups (Overdue / This week / Later / No date)
+   ========================================================================== */
+.todo-group {
+  margin-bottom: var(--space-5);
+}
+
+.todo-group__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-button);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.todo-group__title::-webkit-details-marker {
+  display: none;
+}
+
+.todo-group__chevron {
+  display: inline-grid;
+  color: inherit;
+  transform: rotate(-90deg);
+  transition: transform var(--duration) var(--ease);
+}
+
+.todo-group[open] > .todo-group__title .todo-group__chevron {
+  transform: rotate(0deg);
+}
+
+.todo-group__chevron .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.todo-group__count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overdue: a pale terracotta header, not a red section. */
+.todo-group--overdue > .todo-group__title {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.todo-group--overdue > .todo-group__title .todo-group__count {
+  color: inherit;
+}
+
+/* This week / Later: subtle blue-grey headers. */
+.todo-group--week > .todo-group__title,
+.todo-group--later > .todo-group__title {
+  background: rgb(220 236 248 / 0.6);
+}
+
+/* ==========================================================================
+   Rows
+   ========================================================================== */
 .todo-list {
   list-style: none;
-  padding-left: 0;
+  margin: 0;
+  padding: 0 var(--space-1);
 }
 
-.todo {
-  margin: 0.25rem 0;
-}
-
-/* Top-level rows: collapsible, like the template previews. */
-.todo-list:not(.todo-list--subtasks) > .todo {
-  border-bottom: 1px solid #eee;
-  padding: 0.35rem 0;
+.todo-list > .todo {
+  border-bottom: 1px solid var(--color-border);
 }
 
 .todo__summary {
-  cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.todo__summary input[type="checkbox"] {
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 3.25rem;
+  padding: var(--space-3) var(--space-1);
+  list-style: none;
   cursor: pointer;
 }
 
-.todo__summary input[disabled],
+.todo__summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A 44px hit area around the checkbox; the box itself stays modest. */
+.todo__checkbox {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+  flex-shrink: 0;
+}
+
+.todo__checkbox input,
+.todo__check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+}
+
+.todo__checkbox input[disabled],
 .todo__check input[disabled] {
   cursor: default;
 }
 
-.todo__due,
-.todo__progress,
-.todo__description {
-  color: #666;
+.todo__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding-top: 1px;
+}
+
+.todo__name {
+  overflow-wrap: break-word;
+}
+
+.todo__summary .todo__name {
+  font-weight: 500;
+}
+
+.todo__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.todo__due {
+  font-variant-numeric: tabular-nums;
 }
 
 .todo__due--overdue {
-  color: #c0392b;
-  font-weight: bold;
+  color: var(--color-error-text);
+  font-weight: 600;
 }
 
 .todo__progress {
-  font-size: 0.85rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
+.todo__recurring {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-primary-text);
+}
+
+.todo__recurring .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.todo__next {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.todo__chevron {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-text-placeholder);
+  transition: transform var(--duration) var(--ease);
+}
+
+.todo__chevron .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.todo__details[open] > .todo__summary .todo__chevron {
+  transform: rotate(180deg);
+}
+
+/* ---------- Expanded body ---------- */
 .todo__body {
-  margin: 0.25rem 0 0.5rem 1.75rem;
+  padding: 0 var(--space-1) var(--space-4) calc(2.75rem - var(--space-2));
+  animation: menu-in var(--duration) var(--ease);
 }
 
 .todo__description {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-secondary);
 }
 
-.todo-list--subtasks {
-  margin: 0 0 0.5rem;
+.subtask-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
 }
 
-.todo__check {
+.subtask {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.subtask .todo__check {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  font-weight: 400;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
-.subtask__action {
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  padding: 0 0.25rem;
+.subtask .todo__due {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.subtask__action:hover {
-  color: #4a90d9;
+.subtask__actions {
+  display: flex;
 }
 
-.subtask__action--delete:hover,
-.todo__delete:hover {
-  color: #c0392b;
+.subtask__action--delete:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+@media (hover: hover) {
+  .subtask__actions {
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease);
+  }
+
+  .subtask:hover .subtask__actions,
+  .subtask:focus-within .subtask__actions {
+    opacity: 1;
+  }
 }
 
 .todo__add-subtask,
 .subtask__form {
   display: flex;
-  gap: 0.35rem;
   flex-wrap: wrap;
-  margin-bottom: 0.5rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.todo__add-subtask input[type="text"] {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.subtask--editing {
+  border-bottom: none;
+  padding: var(--space-2) 0;
+}
+
+.subtask__form {
+  flex: 1;
+  margin: 0;
+}
+
+.subtask__form input[type="text"] {
+  flex: 2;
+  min-width: 10rem;
+}
+
+.subtask__form input[type="date"] {
+  flex: 1;
+  min-width: 9rem;
+}
+
+.subtask__form-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.subtask__form .field__error {
+  flex-basis: 100%;
 }
 
 .todo__actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-/* Done items: struck through and muted. Scoped to the item's own row so a
-   done subtask doesn't strike its open siblings. */
-.todo--done > .todo__check .todo__name,
+/* ---------- Done ---------- */
+/* Muted + light strikethrough, scoped to the item's own row so a done
+   subtask doesn't strike its open siblings. Never colour alone: the box is
+   ticked and the text struck. */
 .todo--done > .todo__details > .todo__summary .todo__name,
-.todo--done > .todo__due,
-.todo--done > .todo__details > .todo__summary .todo__due {
+.todo--done > .todo__check .todo__name {
+  color: var(--color-text-secondary);
   text-decoration: line-through;
-  color: #999;
+  text-decoration-color: var(--color-border-strong);
 }
 
-/* Create/edit dialog: native modal <dialog>. */
-.todo-dialog {
-  width: min(32rem, 100vw - 2rem);
-  padding: 1rem;
-  border: none;
-  border-radius: 6px;
-  box-sizing: border-box;
+.todo--done > .todo__details > .todo__summary .todo__due,
+.todo--done > .todo__due {
+  color: var(--color-text-placeholder);
+  font-weight: 400;
 }
 
-.todo-dialog::backdrop {
-  background: rgb(0 0 0 / 0.4);
+.todo--done input[type="checkbox"] {
+  accent-color: var(--color-success-text);
 }
 
-.todo-dialog__field {
-  margin-bottom: 0.75rem;
+/* ==========================================================================
+   Dialog, pagination
+   ========================================================================== */
+.todo-dialog__title {
+  font-size: var(--text-lg);
 }
 
-.todo-dialog__field label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 0.15rem;
-}
-
-.todo-dialog__field input,
-.todo-dialog__field textarea {
+.todo-dialog .field input,
+.todo-dialog .field textarea {
   width: 100%;
-  box-sizing: border-box;
 }
 
-.todo-dialog__error {
-  color: #c0392b;
-  margin: 0.15rem 0 0;
-}
-
-.todo-dialog__actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.todos__toolbar {
+.pagination {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
 }
 
-/* Due-date groups on the open list. */
-.todo-group {
-  margin-bottom: 1rem;
+.pagination__status {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.todo-group__title {
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-.todo-group__count {
-  color: #999;
-  font-weight: normal;
-  font-size: 0.9rem;
-}
-
-.todo-group--overdue > .todo-group__title {
-  color: #c0392b;
-}
-
-.todos__pagination {
+/* ==========================================================================
+   Recurring
+   ========================================================================== */
+.recurring-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.todo__recurring,
-.todo__next {
-  color: #4a90d9;
-  font-size: 0.85rem;
+.recurring {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
 }
 
-.recurring-list > .recurring {
+.recurring__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.recurring__name {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.recurring__meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem;
-  border-bottom: 1px solid #eee;
-  padding: 0.4rem 0;
+  gap: var(--space-1) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
-.recurring-form {
-  max-width: 32rem;
+.recurring__actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
-.recurring-form input,
-.recurring-form textarea,
-.recurring-form select {
+.recurring-form__every {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: none;
+}
+
+.recurring-form__every legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.recurring-form__every input[type="number"] {
+  width: 5rem;
+}
+
+.recurring-form__every .field__error {
+  flex-basis: 100%;
+}
+
+.recurring-form .field input,
+.recurring-form .field textarea {
   width: 100%;
-  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Phones
+   ========================================================================== */
+@media (max-width: 720px) {
+  .tabs {
+    display: flex;
+  }
+
+  .tabs__tab {
+    flex: 1;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 var(--space-2);
+  }
+
+  .todo-list {
+    padding: 0;
+  }
+
+  /* Name on its own line, meta (date, progress) under it. */
+  .todo__main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .todo__body {
+    padding-left: var(--space-1);
+  }
+
+  .todo__add-label {
+    display: none;
+  }
+
+  .todo__add-subtask button {
+    width: 2.75rem;
+    padding: 0;
+  }
+
+  .todo__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .todo__actions .btn--sm,
+  .todo__actions button {
+    min-height: 2.75rem;
+  }
+
+  .subtask__actions .icon-btn {
+    width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .subtask__form input[type="text"],
+  .subtask__form input[type="date"],
+  .subtask__form-actions {
+    flex-basis: 100%;
+  }
+
+  .subtask__form-actions button {
+    flex: 1;
+  }
+
+  .todo-dialog {
+    width: 100vw;
+    max-width: none;
+    margin: auto 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+
+  .todo-dialog .dialog__actions button {
+    flex: 1;
+  }
+
+  .recurring {
+    flex-wrap: wrap;
+    padding: var(--space-4);
+  }
+
+  .recurring__actions {
+    flex-basis: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .recurring__actions .btn {
+    min-height: 2.75rem;
+  }
 }

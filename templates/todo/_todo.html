@@ -1,7 +1,7 @@
-{# One todo: collapsible row with due date and subtask progress in the     #}
-{# summary; description, subtasks and edit controls inside. Every action   #}
-{# returns this partial and swaps it in place, so a todo marked done stays #}
-{# put (greyed out) until the page is reloaded, when the list leaves it out.#}
+{# One todo: a collapsible row. Summary: checkbox, name, due date, subtask  #}
+{# progress, recurrence. Inside: description, subtasks, add-subtask, Edit / #}
+{# Delete. Every action returns this partial and swaps it in place, so a    #}
+{# todo marked done stays put (muted) until the page is reloaded.           #}
 {# Context: todo, open (keep <details> expanded), oob (out-of-band swap),   #}
 {#          next_todo (optional: occurrence a recurring tick just created)  #}
 <li id="todo-{{ todo.pk }}"
@@ -9,58 +9,69 @@
     {% if oob %}hx-swap-oob="true"{% endif %}>
   <details class="todo__details"{% if open %} open{% endif %}>
     <summary class="todo__summary">
-      {# Not wrapped in a label: clicking the name opens the row, only the box ticks. #}
-      <input type="checkbox"
-             aria-label="Mark “{{ todo.name }}” done"
-             {% if todo.is_done %}checked{% endif %}
-             {% if user.is_authenticated %}
-               hx-post="{% url 'todo_toggle' todo.pk %}"
-               hx-target="#todo-{{ todo.pk }}"
-               hx-swap="outerHTML"
-             {% else %}
-               disabled
-             {% endif %}>
-      <span class="todo__name">{{ todo.name }}</span>
-      {% if todo.due_date %}
-        <span class="todo__due{% if todo.is_overdue %} todo__due--overdue{% endif %}">{{ todo.due_date|date:"D j M" }}</span>
-      {% endif %}
-      {% if todo.subtask_progress %}<span class="todo__progress">{{ todo.subtask_progress }}</span>{% endif %}
-      {% if todo.recurring %}<span class="todo__recurring" title="{{ todo.recurring.schedule_label }}">↻ {{ todo.recurring.schedule_label }}</span>{% endif %}
-      {% if next_todo %}<span class="todo__next">Next: {{ next_todo.due_date|date:"D j M" }}</span>{% endif %}
+      {# Not wrapped in a label: tapping the name opens the row, only the box ticks. #}
+      <span class="todo__checkbox">
+        <input type="checkbox"
+               aria-label="Mark “{{ todo.name }}” done"
+               {% if todo.is_done %}checked{% endif %}
+               {% if user.is_authenticated %}
+                 hx-post="{% url 'todo_toggle' todo.pk %}"
+                 hx-target="#todo-{{ todo.pk }}"
+                 hx-swap="outerHTML"
+               {% else %}
+                 disabled
+               {% endif %}>
+      </span>
+      <span class="todo__main">
+        <span class="todo__name">{{ todo.name }}</span>
+        <span class="todo__meta">
+          {% if todo.due_date %}
+            <span class="todo__due{% if todo.is_overdue %} todo__due--overdue{% endif %}">{% if todo.is_overdue %}<span class="visually-hidden">Overdue: </span>{% endif %}{{ todo.due_date|date:"D j M" }}</span>
+          {% endif %}
+          {% if todo.subtask_progress %}<span class="todo__progress">{{ todo.subtask_progress }}</span>{% endif %}
+          {% if todo.recurring %}<span class="todo__recurring">{% include "icons/repeat.svg" %}{{ todo.recurring.schedule_label }}</span>{% endif %}
+          {% if next_todo %}<span class="todo__next">Next: {{ next_todo.due_date|date:"D j M" }}</span>{% endif %}
+        </span>
+      </span>
+      <span class="todo__chevron" aria-hidden="true">{% include "icons/chevron-down.svg" %}</span>
     </summary>
 
     <div class="todo__body">
       {% if todo.description %}<p class="todo__description">{{ todo.description|linebreaksbr }}</p>{% endif %}
 
-      <ul class="todo-list todo-list--subtasks">
-        {% for subtask in todo.subtasks.all %}
-          <li class="todo subtask{% if subtask.is_done %} todo--done{% endif %}" id="subtask-{{ subtask.pk }}">
-            <label class="todo__check">
-              <input type="checkbox"
-                     {% if subtask.is_done %}checked{% endif %}
-                     {% if user.is_authenticated %}
-                       hx-post="{% url 'subtask_toggle' subtask.pk %}"
-                       hx-target="#todo-{{ todo.pk }}"
-                       hx-swap="outerHTML"
-                     {% else %}
-                       disabled
-                     {% endif %}>
-              <span class="todo__name">{{ subtask.name }}</span>
-            </label>
-            {% if subtask.due_date %}<span class="todo__due">{{ subtask.due_date|date:"D j M" }}</span>{% endif %}
-            {% if user.is_authenticated %}
-              <button type="button" class="subtask__action" aria-label="Edit subtask" title="Edit"
-                      hx-get="{% url 'subtask_edit' subtask.pk %}"
-                      hx-target="#subtask-{{ subtask.pk }}"
-                      hx-swap="outerHTML">✎</button>
-              <button type="button" class="subtask__action subtask__action--delete" aria-label="Delete subtask" title="Delete"
-                      hx-post="{% url 'subtask_delete' subtask.pk %}"
-                      hx-target="#todo-{{ todo.pk }}"
-                      hx-swap="outerHTML">×</button>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
+      {% if todo.subtasks.all %}
+        <ul class="subtask-list">
+          {% for subtask in todo.subtasks.all %}
+            <li class="todo subtask{% if subtask.is_done %} todo--done{% endif %}" id="subtask-{{ subtask.pk }}">
+              <label class="todo__check">
+                <input type="checkbox"
+                       {% if subtask.is_done %}checked{% endif %}
+                       {% if user.is_authenticated %}
+                         hx-post="{% url 'subtask_toggle' subtask.pk %}"
+                         hx-target="#todo-{{ todo.pk }}"
+                         hx-swap="outerHTML"
+                       {% else %}
+                         disabled
+                       {% endif %}>
+                <span class="todo__name">{{ subtask.name }}</span>
+              </label>
+              {% if subtask.due_date %}<span class="todo__due">{{ subtask.due_date|date:"D j M" }}</span>{% endif %}
+              {% if user.is_authenticated %}
+                <span class="subtask__actions">
+                  <button type="button" class="icon-btn subtask__action" aria-label="Edit subtask" title="Edit"
+                          hx-get="{% url 'subtask_edit' subtask.pk %}"
+                          hx-target="#subtask-{{ subtask.pk }}"
+                          hx-swap="outerHTML">{% include "icons/pencil.svg" %}</button>
+                  <button type="button" class="icon-btn subtask__action subtask__action--delete" aria-label="Delete subtask" title="Delete"
+                          hx-post="{% url 'subtask_delete' subtask.pk %}"
+                          hx-target="#todo-{{ todo.pk }}"
+                          hx-swap="outerHTML">{% include "icons/x.svg" %}</button>
+                </span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
 
       {% if user.is_authenticated %}
         <form class="todo__add-subtask"
@@ -68,18 +79,18 @@
               hx-target="#todo-{{ todo.pk }}"
               hx-swap="outerHTML">
           <input type="text" name="name" placeholder="Add subtask…" aria-label="New subtask" required>
-          <button type="submit">Add</button>
+          <button type="submit" class="btn--secondary" aria-label="Add subtask">{% include "icons/plus.svg" %}<span class="todo__add-label">Add</span></button>
         </form>
 
         <div class="todo__actions">
-          <button type="button"
+          <button type="button" class="btn--secondary btn--sm"
                   hx-get="{% url 'todo_edit' todo.pk %}"
-                  hx-target="#todo-dialog">Edit</button>
-          <button type="button" class="todo__delete"
+                  hx-target="#todo-dialog">{% include "icons/pencil.svg" %}Edit</button>
+          <button type="button" class="btn--danger btn--sm todo__delete"
                   hx-post="{% url 'todo_delete' todo.pk %}"
                   hx-target="#todo-{{ todo.pk }}"
                   hx-swap="outerHTML"
-                  hx-confirm="Delete “{{ todo.name }}” and its subtasks?">Delete</button>
+                  hx-confirm="Delete “{{ todo.name }}” and its subtasks?">{% include "icons/trash.svg" %}Delete</button>
         </div>
       {% endif %}
     </div>

@@ -4,7 +4,11 @@
 <div id="todo-list"{% if oob %} hx-swap-oob="true"{% endif %}>
   {% for group in groups %}
     <details class="todo-group todo-group--{{ group.key }}"{% if group.open %} open{% endif %}>
-      <summary class="todo-group__title">{{ group.label }} <span class="todo-group__count">{{ group.todos|length }}</span></summary>
+      <summary class="todo-group__title">
+        <span class="todo-group__chevron" aria-hidden="true">{% include "icons/chevron-down.svg" %}</span>
+        <span class="todo-group__label">{{ group.label }}</span>
+        <span class="todo-group__count">{{ group.todos|length }}</span>
+      </summary>
       <ul class="todo-list">
         {% for todo in group.todos %}
           {% include "todo/_todo.html" with open=False oob=False %}
@@ -12,6 +16,9 @@
       </ul>
     </details>
   {% empty %}
-    <p>Nothing to do.</p>
+    <div class="empty-state">
+      <p class="empty-state__title">Nothing to do</p>
+      <p>New todos, recurring tasks and exported shopping lists show up here.</p>
+    </div>
   {% endfor %}
 </div>

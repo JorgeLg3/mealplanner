@@ -1,0 +1,20 @@
+{# Todos page header + segmented tabs, shared by All / Done / Recurring.  #}
+{# Context: active ("all" | "done" | "recurring"), primary (optional: "todo" | "recurring") #}
+<header class="page-header todo-header">
+  <h1 class="page-title">{% include "icons/square-check.svg" %}Todos</h1>
+  {% if user.is_authenticated %}
+    <div class="page-header__actions">
+      {% if primary == "recurring" %}
+        <a class="btn btn--primary" href="{% url 'recurring_create' %}">{% include "icons/plus.svg" %}New recurring todo</a>
+      {% elif primary == "todo" %}
+        <button type="button" class="btn--primary" hx-get="{% url 'todo_create' %}" hx-target="#todo-dialog">{% include "icons/plus.svg" %}New todo</button>
+      {% endif %}
+    </div>
+  {% endif %}
+</header>
+
+<nav class="tabs" aria-label="Todo views">
+  <a class="tabs__tab{% if active == 'all' %} is-active{% endif %}" href="{% url 'todo_list' %}"{% if active == 'all' %} aria-current="page"{% endif %}>All</a>
+  <a class="tabs__tab{% if active == 'done' %} is-active{% endif %}" href="{% url 'todo_done' %}"{% if active == 'done' %} aria-current="page"{% endif %}>Show done</a>
+  <a class="tabs__tab{% if active == 'recurring' %} is-active{% endif %}" href="{% url 'recurring_list' %}"{% if active == 'recurring' %} aria-current="page"{% endif %}>Recurring</a>
+</nav>

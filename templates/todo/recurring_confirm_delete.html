@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
+{% block title %}Delete {{ object.name }} · Meal Planner{% endblock %}
+
 {% block content %}
-  <h1>Delete recurring todo</h1>
-  <p>Delete “{{ object.name }}”? Its open todo is deleted too; todos already done are kept.</p>
-  <form method="post">
-    {% csrf_token %}
-    <a href="{% url 'recurring_list' %}">Cancel</a>
-    <button type="submit">Delete</button>
-  </form>
+  <div class="auth-card">
+    <h1>Delete recurring todo?</h1>
+    <p class="text-secondary">“{{ object.name }}” and its open todo will be removed. Todos already done are kept.</p>
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <a class="btn btn--secondary" href="{% url 'recurring_list' %}">Cancel</a>
+      <button type="submit" class="btn--danger-solid">Delete</button>
+    </form>
+  </div>
 {% endblock %}

@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Done · Todos · Meal Planner{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/todo.css' %}">
 {% endblock %}
@@ -8,24 +10,32 @@
 {% block content %}
   {# Same rows as the open list; unticking one reopens it (it leaves this page on reload). #}
   <div class="todos" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <h1>Done</h1>
-    <div class="todos__toolbar">
-      <a href="{% url 'todo_list' %}">Back to todos</a>
-    </div>
+    {% include "todo/_todo_header.html" with active="done" %}
 
-    <ul class="todo-list">
-      {% for todo in page %}
-        {% include "todo/_todo.html" with open=False oob=False %}
-      {% empty %}
-        <li>Nothing done yet.</li>
-      {% endfor %}
-    </ul>
+    {% if page.object_list %}
+      <div class="todo-group todo-group--done">
+        <ul class="todo-list">
+          {% for todo in page %}
+            {% include "todo/_todo.html" with open=False oob=False %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p class="empty-state__title">Nothing done yet</p>
+        <p>Ticked todos are kept here, most recent first.</p>
+      </div>
+    {% endif %}
 
     {% if page.has_other_pages %}
-      <nav class="todos__pagination">
-        {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Newer</a>{% endif %}
-        <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-        {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older</a>{% endif %}
+      <nav class="pagination" aria-label="Pages">
+        {% if page.has_previous %}
+          <a class="btn btn--secondary btn--sm" href="?page={{ page.previous_page_number }}">{% include "icons/chevron-left.svg" %}Newer</a>
+        {% endif %}
+        <span class="pagination__status">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}
+          <a class="btn btn--secondary btn--sm icon-btn--flip" href="?page={{ page.next_page_number }}">Older{% include "icons/chevron-left.svg" %}</a>
+        {% endif %}
       </nav>
     {% endif %}
 
