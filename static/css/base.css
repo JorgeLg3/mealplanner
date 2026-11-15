@@ -840,15 +840,33 @@ label {
     display: block;
   }
 
-  .site-account-menu > summary {
-    width: 2.75rem;
-    min-height: 2.75rem;
-    color: var(--color-text);
+  /* Round avatar (initial) that opens the account menu. */
+  .site-avatar {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    /* 44px touch target around the 36px circle */
+    margin: -0.25rem;
+    border: 0.25rem solid transparent;
+    background-clip: padding-box;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease);
   }
 
-  .site-account-menu > summary .icon {
-    width: 1.375rem;
-    height: 1.375rem;
+  .site-avatar:hover,
+  .site-account-menu[open] > .site-avatar {
+    background-color: var(--color-primary-hover);
+  }
+
+  .site-avatar .icon {
+    width: 1.125rem;
+    height: 1.125rem;
   }
 
   .site-main {

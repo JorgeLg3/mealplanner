@@ -9,6 +9,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+
+from django_project.test_utils import LoggedInTestCase
 from PIL import Image
 
 from .models import (
@@ -20,7 +22,7 @@ from .models import (
 )
 
 
-class RecipeListTests(TestCase):
+class RecipeListTests(LoggedInTestCase):
     def test_recipes_grouped_by_category_with_uncategorized_last(self):
         dinner = RecipeCategory.objects.create(name="Dinner")
         breakfast = RecipeCategory.objects.create(name="Breakfast")
@@ -47,7 +49,7 @@ class RecipeListTests(TestCase):
             )
 
 
-class RecipeDetailTests(TestCase):
+class RecipeDetailTests(LoggedInTestCase):
     def test_shows_category(self):
         category = RecipeCategory.objects.create(name="Dessert")
         recipe = Recipe.objects.create(
@@ -66,7 +68,7 @@ class RecipeDetailTests(TestCase):
         )
 
 
-class IngredientListTests(TestCase):
+class IngredientListTests(LoggedInTestCase):
     def test_ingredients_grouped_by_category_with_uncategorized_last(self):
         veg = IngredientCategory.objects.create(name="Vegetables")
         dairy = IngredientCategory.objects.create(name="Dairy")
@@ -93,8 +95,9 @@ class IngredientListTests(TestCase):
         self.assertContains(response, f'href="{reverse("ingredient_list")}"')
 
 
-class RecipeCatalogTests(TestCase):
+class RecipeCatalogTests(LoggedInTestCase):
     def setUp(self):
+        super().setUp()
         self.meat = RecipeCategory.objects.create(name="carnes")
         self.soup = RecipeCategory.objects.create(name="sopas")
         Recipe.objects.create(

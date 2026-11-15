@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from django_project.test_utils import LoggedInTestCase
+
 from recipes.models import (
     Ingredient,
     IngredientCategory,
@@ -328,7 +330,7 @@ class MealCellTests(TestCase):
         )
 
 
-class TemplateWeekListTests(TestCase):
+class TemplateWeekListTests(LoggedInTestCase):
     def test_list_previews_each_template_read_only(self):
         recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
         template = TemplateWeek.objects.create(name="Usual")
@@ -364,8 +366,9 @@ class TemplateWeekListTests(TestCase):
                 recipe=recipe,
             )
 
-        # Templates, their meals, and the meals' recipes.
-        with self.assertNumQueries(3):
+        # Session + user (login), then templates, their meals, and the
+        # meals' recipes: constant however many templates there are.
+        with self.assertNumQueries(5):
             self.client.get(reverse("templateweek_list"))
 
 
@@ -435,15 +438,10 @@ class PlannerCalendarPageTests(TestCase):
         self.assertContains(lunch, "Remove lunch on Monday")
         self.assertContains(dinner, 'aria-label="Add dinner on Monday"')
 
-    def test_anonymous_sees_meals_but_no_controls(self):
-        CalendarMeal.objects.create(
-            date=self.monday, meal_type=MealType.LUNCH, recipe=self.recipe
-        )
+    def test_logged_out_is_sent_to_login(self):
         self.client.logout()
         response = self.client.get(reverse("planner_calendar"))
-        self.assertContains(response, "Stew")
-        self.assertNotContains(response, "slot__add")
-        self.assertNotContains(response, "Export shopping list")
+        self.assertRedirects(response, "/auth/login/?next=/planner/")
 
     def test_week_toolbar_has_desktop_buttons_and_mobile_menu(self):
         response = self.client.get(reverse("planner_calendar"))

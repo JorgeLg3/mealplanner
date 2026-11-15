@@ -3,6 +3,8 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+
+from django_project.test_utils import LoggedInTestCase
 from django.utils import timezone
 
 from .models import RecurringTodo, Subtask, Todo
@@ -89,6 +91,7 @@ class ToggleTests(TestCase):
 
     def test_list_hides_done_todos(self):
         Todo.objects.create(name="Laundry", is_done=True)
+        self.client.force_login(self.user)
 
         response = self.client.get(reverse("todo_list"))
 
@@ -107,10 +110,9 @@ class ToggleTests(TestCase):
         response = self.client.get(reverse("todo_toggle", args=[self.todo.pk]))
         self.assertEqual(response.status_code, 405)
 
-    def test_anonymous_list_shows_disabled_checkboxes(self):
+    def test_logged_out_list_redirects_to_login(self):
         response = self.client.get(reverse("todo_list"))
-        self.assertContains(response, "disabled")
-        self.assertNotContains(response, reverse("todo_toggle", args=[self.todo.pk]))
+        self.assertRedirects(response, "/auth/login/?next=/todo/")
 
 
 class TodoCrudTests(TestCase):
@@ -262,14 +264,15 @@ class TodoPermissionTests(TestCase):
         self.assertTrue(Todo.objects.filter(name="Groceries").exists())
         self.assertTrue(Subtask.objects.filter(name="Milk").exists())
 
-    def test_anonymous_list_has_no_edit_controls(self):
-        response = self.client.get(reverse("todo_list"))
-        self.assertNotContains(response, reverse("todo_create"))
-        self.assertNotContains(response, reverse("todo_edit", args=[self.todo.pk]))
-        self.assertNotContains(response, "Add subtask")
+    def test_logged_out_pages_redirect_to_login(self):
+        for name in ["todo_list", "todo_done", "recurring_list"]:
+            with self.subTest(view=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 302)
+                self.assertTrue(response["Location"].startswith("/auth/login/"))
 
 
-class GroupingTests(TestCase):
+class GroupingTests(LoggedInTestCase):
     def _groups(self):
         response = self.client.get(reverse("todo_list"))
         return {

@@ -24,6 +24,7 @@
 
         {# Active section: prefix match on the path. Templates live under the #}
         {# planner URL, so Planner is only active outside the templates pages. #}
+        {% if user.is_authenticated %}
         <nav class="site-nav" aria-label="Main">
           <a href="{{ planner_url }}"
              {% if planner_url in request.path and templates_url not in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/calendar.svg" %}<span>Planner</span></a>
@@ -34,6 +35,7 @@
           <a href="{{ todos_url }}"
              {% if todos_url in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/square-check.svg" %}<span>Todos</span></a>
         </nav>
+        {% endif %}
 
         <div class="site-auth">
           {% if user.is_authenticated %}
@@ -44,13 +46,15 @@
             </form>
           {% else %}
             <a href="{% url 'login' %}">Log in</a>
-            <a href="{% url 'signup' %}">Sign up</a>
           {% endif %}
         </div>
 
-        {# Mobile: account actions move into a menu; sections go to the tab bar. #}
+        {# Mobile: account actions sit behind the avatar; sections go to the tab bar. #}
         <details class="menu site-account-menu">
-          <summary class="btn icon-btn" aria-label="Account menu">{% include "icons/menu.svg" %}</summary>
+          {# Avatar: the user's initial, or a person outline when signed out. #}
+          <summary class="site-avatar" aria-label="{% if user.is_authenticated %}Account menu for {{ user.username }}{% else %}Account menu{% endif %}">
+            {% if user.is_authenticated %}{{ user.username|first|upper }}{% else %}{% include "icons/user.svg" %}{% endif %}
+          </summary>
           <div class="menu__items">
             {% if user.is_authenticated %}
               <span class="menu__label">Signed in as {{ user.username }}</span>
@@ -60,8 +64,7 @@
               </form>
             {% else %}
               <a href="{% url 'login' %}">Log in</a>
-              <a href="{% url 'signup' %}">Sign up</a>
-            {% endif %}
+              {% endif %}
           </div>
         </details>
       </div>
@@ -74,13 +77,15 @@
     {# Shown by app.js when an HTMX request fails. #}
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-    {# Mobile bottom tab bar (hidden on wide screens). #}
+    {# Mobile bottom tab bar (hidden on wide screens); signed-in only. #}
+    {% if user.is_authenticated %}
     <nav class="tab-bar" aria-label="Sections">
       <a href="{{ planner_url }}" {% if planner_url in request.path and templates_url not in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/calendar.svg" %}<span>Planner</span></a>
       <a href="{{ templates_url }}" {% if templates_url in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/layers.svg" %}<span>Templates</span></a>
       <a href="{{ recipes_url }}" {% if recipes_url in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/book-open.svg" %}<span>Recipes</span></a>
       <a href="{{ todos_url }}" {% if todos_url in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/square-check.svg" %}<span>Todos</span></a>
     </nav>
+    {% endif %}
     <script src="{% static 'js/app.js' %}" defer></script>
     <script src="{% static 'js/combobox.js' %}" defer></script>
   </body>

@@ -3,6 +3,8 @@ import re
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 
+from django_project.test_utils import LoggedInTestCase
+
 
 class ViewTests(SimpleTestCase):
     def test_home_page(self):
@@ -14,7 +16,7 @@ class ViewTests(SimpleTestCase):
         self.assertEqual(self.client.get("/about").status_code, 404)
 
 
-class NavTests(TestCase):
+class NavTests(LoggedInTestCase):
     def _active(self, url):
         html = self.client.get(url).content.decode()
         nav = html.split('class="site-nav"')[1].split("</nav>")[0]
@@ -28,9 +30,10 @@ class NavTests(TestCase):
         self.assertEqual(self._active("/todo/recurring/"), ["/todo/"])
 
     def test_auth_controls(self):
-        response = self.client.get("/")
+        self.client.logout()
+        response = self.client.get("/auth/login/")
         self.assertContains(response, "Log in")
-        self.assertContains(response, "Sign up")
+        self.assertNotContains(response, "Sign up")
 
         user = get_user_model().objects.create_user(username="jorge", password="x")
         self.client.force_login(user)
@@ -50,7 +53,7 @@ class NavTests(TestCase):
             response.content.decode().split('class="tab-bar"')[1].split("</nav>")[0]
         )
         self.assertIn('href="/recipes/" class="is-active"', tab_bar)
-        self.assertContains(response, 'aria-label="Account menu"')
+        self.assertContains(response, 'aria-label="Account menu for member"')
 
 
 class PolishTests(TestCase):
@@ -59,6 +62,55 @@ class PolishTests(TestCase):
         self.assertRedirects(response, "/auth/login/?next=/todo/create/")
 
     def test_layout_loads_app_script_and_toast(self):
-        response = self.client.get("/")
+        response = self.client.get("/auth/login/")
         self.assertRegex(response.content.decode(), r"/static/js/app\.[0-9a-f]+\.js")
         self.assertContains(response, 'id="toast"')
+
+    def test_mobile_avatar_shows_user_initial(self):
+        user = get_user_model().objects.create_user(username="jorge", password="x")
+        self.client.force_login(user)
+        response = self.client.get("/")
+        self.assertContains(response, 'aria-label="Account menu for jorge"')
+        avatar = response.content.decode().split('class="site-avatar"')[1]
+        self.assertEqual(avatar.split(">", 1)[1].split("<", 1)[0].strip(), "J")
+
+
+class LoginRequiredTests(TestCase):
+    def test_every_section_redirects_to_login_when_logged_out(self):
+        for url in [
+            "/",
+            "/planner/",
+            "/planner/templates/",
+            "/recipes/",
+            "/recipes/1/",
+            "/todo/",
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response["Location"].split("?")[0], "/auth/login/")
+
+    def test_public_pages_stay_reachable(self):
+        for url in [
+            "/auth/login/",
+            "/auth/password_reset/",
+            "/health/",
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_logged_out_pages_hide_section_navigation(self):
+        response = self.client.get("/auth/login/")
+        self.assertNotContains(response, 'class="site-nav"')
+        self.assertNotContains(response, 'class="tab-bar"')
+
+    def test_login_then_lands_on_requested_page(self):
+        get_user_model().objects.create_user(username="jorge", password="pw-12345!")
+        response = self.client.post(
+            "/auth/login/?next=/recipes/",
+            {"username": "jorge", "password": "pw-12345!", "next": "/recipes/"},
+        )
+        self.assertRedirects(response, "/recipes/")
+
+    def test_signup_is_closed(self):
+        self.assertEqual(self.client.get("/auth/signup/").status_code, 404)
