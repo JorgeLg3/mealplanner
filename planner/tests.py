@@ -129,6 +129,11 @@ class ExportShoppingListTests(TestCase):
         self.assertNotContains(response, "<dialog")
         todo = Todo.objects.get()
         self.assertEqual(todo.name, "Big shop")
+        # Subtasks keep the preview's category order (Pantry before Vegetables).
+        self.assertEqual(
+            list(todo.subtasks.values_list("name", flat=True)),
+            ["Pasta: 200 g", "Tomato: 1 ud + 300 g"],
+        )
         self.assertEqual(todo.due_date, datetime.date(2030, 1, 5))
         self.assertEqual(
             sorted(todo.subtasks.values_list("name", flat=True)),

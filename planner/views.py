@@ -576,7 +576,10 @@ def week_export_shopping_list(request, monday):
     with transaction.atomic():
         todo = Todo.objects.create(name=name, due_date=due_date)
         Subtask.objects.bulk_create(
-            [Subtask(todo=todo, name=item["label"]) for item in selected]
+            [
+                Subtask(todo=todo, name=item["label"], position=position)
+                for position, item in enumerate(selected, start=1)
+            ]
         )
     return _render_week(
         request,

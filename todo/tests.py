@@ -677,3 +677,35 @@ class TodoLayoutTests(TestCase):
         response = self.client.get(reverse("todo_list"))
         self.assertContains(response, '<span class="visually-hidden">Overdue: </span>')
         self.assertContains(response, "todo-group--overdue")
+
+
+class SubtaskOrderTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        self.todo = Todo.objects.create(name="Groceries")
+
+    def _names(self):
+        return list(self.todo.subtasks.values_list("name", flat=True))
+
+    def test_new_subtasks_are_appended(self):
+        for name in ["Milk", "Eggs", "Bread"]:
+            self.client.post(
+                reverse("subtask_create", args=[self.todo.pk]), {"name": name}
+            )
+        self.assertEqual(self._names(), ["Milk", "Eggs", "Bread"])
+
+    def test_done_subtasks_sink_but_keep_their_order(self):
+        for name in ["Milk", "Eggs", "Bread"]:
+            Subtask.objects.create(todo=self.todo, name=name)
+        milk = Subtask.objects.get(name="Milk")
+        self.client.post(reverse("subtask_toggle", args=[milk.pk]))
+        self.assertEqual(self._names(), ["Eggs", "Bread", "Milk"])
+
+    def test_positions_are_per_todo(self):
+        other = Todo.objects.create(name="Other")
+        Subtask.objects.create(todo=other, name="X")
+        first = Subtask.objects.create(todo=self.todo, name="A")
+        self.assertEqual(first.position, 1)

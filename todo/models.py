@@ -174,10 +174,24 @@ class Subtask(models.Model):
     name = models.CharField(max_length=200)
     due_date = models.DateField(null=True, blank=True)
     is_done = models.BooleanField(default=False)
+    # Order within the todo: new subtasks go last; exported shopping lists
+    # keep the preview's category order.
+    position = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["is_done", "due_date", "-created_at"]
+        # Open before done, then in list order.
+        ordering = ["is_done", "position", "pk"]
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Append to the end of the list unless a position was given
+        # (bulk_create callers such as the shopping export set it themselves).
+        if self._state.adding and not self.position:
+            last = Subtask.objects.filter(todo_id=self.todo_id).aggregate(
+                models.Max("position")
+            )["position__max"]
+            self.position = (last or 0) + 1
+        super().save(*args, **kwargs)
