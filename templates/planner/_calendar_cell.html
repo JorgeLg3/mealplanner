@@ -6,7 +6,7 @@
 <div class="slot{% if meal %} slot--filled{% else %} slot--empty{% endif %}" id="cell-{{ slot_id }}">
   <span class="label slot__label">{{ meal_type_label }}</span>
   {% if meal %}
-    <a class="slot__recipe" href="{{ meal.recipe.get_absolute_url }}">{{ meal.recipe.name }}</a>
+    <a class="slot__recipe" href="{{ meal.recipe.get_absolute_url }}" title="{{ meal.recipe.name }}">{{ meal.recipe.name }}</a>
     {% if user.is_authenticated %}
       <div class="slot__actions">
         <button type="button"
@@ -32,7 +32,7 @@
             aria-label="Add {{ meal_type_label|lower }} on {{ date|date:'l' }}"
             hx-get="{% url 'calendarmeal_form' date meal_type %}"
             hx-target="#cell-{{ slot_id }}"
-            hx-swap="outerHTML">{% include "icons/plus.svg" %}<span>Add<span class="slot__add-long"> {{ meal_type_label|lower }}</span></span></button>
+            hx-swap="outerHTML">{% include "icons/plus.svg" %}<span>Add<span class="slot__add-long"> meal</span></span></button>
   {% else %}
     <span class="slot__none">—</span>
   {% endif %}

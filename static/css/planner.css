@@ -147,12 +147,19 @@
   font-weight: 600;
 }
 
+/* Every slot has the same height so the week reads as an even grid;
+   long recipe names are cut to a few lines with an ellipsis instead. */
+.week-days {
+  --slot-height: 7.5rem; /* label row + 3 lines of name */
+}
+
 .slot {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-height: 5.75rem;
+  height: var(--slot-height);
+  overflow: hidden;
   padding: var(--space-2) var(--space-3) var(--space-3);
   background: var(--color-field);
   border: 1px solid var(--color-border);
@@ -165,13 +172,18 @@
   border-style: dashed;
 }
 
+/* The inline form is the one exception: it grows to fit. */
 .slot--editing {
+  height: auto;
+  min-height: var(--slot-height);
+  overflow: visible;
   border-color: var(--color-primary);
   box-shadow: var(--focus-ring);
 }
 
 /* Label row (LUNCH / DINNER) with the actions on its right. */
 .slot__label {
+  flex-shrink: 0;
   min-height: var(--control-height-sm);
   display: flex;
   align-items: center;
@@ -497,10 +509,6 @@ button.slot__add:hover {
 }
 
 /* Read-only slots: same shape, quieter, and empty ones clearly not buttons. */
-.slot--readonly {
-  min-height: 4.5rem;
-}
-
 .slot--readonly.slot--empty {
   background: var(--color-surface-sunken);
   border: 1px solid transparent;
@@ -676,8 +684,11 @@ button.slot__add:hover {
     font-weight: 600;
   }
 
+  .week-days {
+    --slot-height: 6.5rem; /* label row + 2 lines at the larger phone size */
+  }
+
   .slot {
-    min-height: 0;
     padding: var(--space-2) var(--space-3) var(--space-3);
   }
 
@@ -700,21 +711,13 @@ button.slot__add:hover {
     padding-right: 5.5rem;
   }
 
-  /* Empty slot: a full-width, light blue "Add meal". */
-  .slot--empty {
-    padding: var(--space-2);
-    border: none;
-  }
-
-  /* The button names the meal ("Add lunch"), so the label is redundant. */
-  .slot--empty .slot__label {
-    display: none;
-  }
-
+  /* Empty slot: same box as a filled one, with a full-width light blue
+     "Add meal" under its LUNCH / DINNER label. */
   .slot__add,
   button.slot__add {
     align-self: stretch;
-    min-height: 3rem;
+    flex: 1;
+    min-height: 0;
     margin: 0;
     background: rgb(220 236 248 / 0.45);
     border: 1px solid var(--color-primary-light);
@@ -847,11 +850,6 @@ button.slot__add:hover {
 
   .week-days--template .slot__recipe {
     font-size: var(--text-base);
-  }
-
-  /* Keep the meal name visible on empty template slots (two per row). */
-  .week-days--template .slot--empty .slot__label {
-    display: flex;
   }
 
   .week-days--template .slot__add-long {
