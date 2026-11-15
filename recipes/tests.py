@@ -1,3 +1,4 @@
+import datetime
 import io
 import os
 import shutil
@@ -353,3 +354,46 @@ class RecipeImageTests(TestCase):
 
         with self.assertRaises(ValidationError):
             validate_image_size(Big())
+
+
+class RecipeDeleteInUseTests(TestCase):
+    def setUp(self):
+        from planner.models import CalendarMeal, MealType, TemplateMeal, TemplateWeek
+
+        self.user = get_user_model().objects.create_user(username="cook", password="x")
+        self.client.force_login(self.user)
+        self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+        self.date = datetime.date(2030, 1, 9)
+        CalendarMeal.objects.create(
+            date=self.date, meal_type=MealType.LUNCH, recipe=self.recipe
+        )
+        self.template = TemplateWeek.objects.create(name="Usual")
+        TemplateMeal.objects.create(
+            template=self.template,
+            weekday=1,
+            meal_type=MealType.DINNER,
+            recipe=self.recipe,
+        )
+        self.url = reverse("recipe_delete", args=[self.recipe.pk])
+
+    def test_page_lists_where_the_recipe_is_used_and_offers_no_delete(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "is in use")
+        self.assertContains(response, f"?week={self.date.isoformat()}")
+        self.assertContains(
+            response, reverse("templateweek_detail", args=[self.template.pk])
+        )
+        self.assertNotContains(response, "Delete recipe</button>")
+
+    def test_posting_anyway_does_not_crash_or_delete(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "is in use")
+        self.assertTrue(Recipe.objects.filter(pk=self.recipe.pk).exists())
+
+    def test_unused_recipe_can_be_deleted(self):
+        free = Recipe.objects.create(name="Toast", description="d", servings=1)
+        url = reverse("recipe_delete", args=[free.pk])
+        self.assertContains(self.client.get(url), "Delete recipe</button>")
+        self.assertRedirects(self.client.post(url), reverse("recipe_list"))
+        self.assertFalse(Recipe.objects.filter(pk=free.pk).exists())

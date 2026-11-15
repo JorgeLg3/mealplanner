@@ -10,20 +10,22 @@
   --color-surface: #fffdf9;        /* cards, panels: ivory */
   --color-surface-sunken: #f5f1ea; /* hover fills, empty slots */
   --color-nav: #e8f1f8;            /* navigation: pale powder blue */
-  --color-primary: #397bb7;        /* main buttons, interactive links */
+  --color-primary: #3675ae;        /* main buttons, links (spec #397BB7, nudged to 4.5:1 AA) */
   --color-primary-hover: #2d659a;
   --color-primary-light: #dcecf8;  /* selected nav/filters, badges */
   --color-primary-text: #2d5f8f;   /* dark blue text on light blue */
   --color-on-primary: #ffffff;
+  --color-field: #ffffff;          /* input and meal-slot fill */
   --color-text: #253448;           /* headings and body */
-  --color-text-secondary: #67727e; /* metadata (a shade darker than #7c8793 for AA on cream) */
-  --color-text-placeholder: #9aa3ad;
+  --color-text-secondary: #646f7a; /* metadata (spec #7C8793, darkened for AA on cream/sand) */
+  --color-text-placeholder: #71777f; /* AA on white inputs */
   --color-border: #e5e2dc;
   --color-border-strong: #d6d1c8;
   --color-success-bg: #e6efe5;
   --color-success-text: #426b53;
   --color-error-bg: #fbece7;
-  --color-error-text: #b95b47;
+  --color-error-text: #a95340;     /* spec #B95B47, darkened for AA on its background */
+  --color-error-hover: #8f4636;
 
   /* Type */
   --font-sans: "DM Sans", "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
@@ -59,7 +61,7 @@
   /* Elevation */
   --shadow-sm: 0 2px 8px rgb(37 52 72 / 0.04);
   --shadow-md: 0 6px 20px rgb(37 52 72 / 0.08);
-  --focus-ring: 0 0 0 3px rgb(57 123 183 / 0.28);
+  --focus-ring: 0 0 0 3px rgb(54 117 174 / 0.3);
 
   /* Controls */
   --control-height: 2.5rem;
@@ -292,8 +294,8 @@ button[type="submit"].btn--danger-solid {
 
 .btn--danger-solid:hover,
 button[type="submit"].btn--danger-solid:hover {
-  background: #a04d3b;
-  border-color: #a04d3b;
+  background: var(--color-error-hover);
+  border-color: var(--color-error-hover);
   color: var(--color-on-primary);
 }
 
@@ -364,7 +366,7 @@ select,
 textarea {
   min-height: var(--control-height);
   padding: var(--space-2) var(--space-3);
-  background: #ffffff;
+  background: var(--color-field);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-input);
   color: inherit;
@@ -797,6 +799,18 @@ label {
   color: inherit;
 }
 
+/* Tablet / narrow desktop: keep the header on one line. */
+@media (min-width: 721px) and (max-width: 960px) {
+  .site-header__inner {
+    gap: var(--space-4);
+  }
+
+  .site-nav a .icon,
+  .site-auth__user {
+    display: none;
+  }
+}
+
 /* Account menu and tab bar exist only for the mobile layout. */
 .site-account-menu,
 .tab-bar {
@@ -941,6 +955,17 @@ label {
     width: 100%;
   }
 
+  /* Several equal actions (no single primary): keep them in a row. */
+  .page-header__actions--row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .page-header__actions--row .btn {
+    width: auto;
+    flex: 1;
+  }
+
   .panel {
     padding: var(--space-4);
   }
@@ -1041,4 +1066,52 @@ label {
 .home-index__desc {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+}
+
+/* ==========================================================================
+   Toast (request errors), double-submit guard
+   ========================================================================== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  z-index: 50;
+  transform: translateX(-50%);
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-md);
+  animation: menu-in var(--duration) var(--ease);
+}
+
+@media (max-width: 720px) {
+  .toast {
+    bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
+  }
+}
+
+/* While HTMX is sending, ignore further clicks (no double exports/creates). */
+.htmx-request button[type="submit"],
+button.htmx-request {
+  pointer-events: none;
+}
+
+.usage-list {
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.usage-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.usage-list a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
 }

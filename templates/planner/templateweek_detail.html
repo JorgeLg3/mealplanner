@@ -16,9 +16,13 @@
         {{ meal_count }}/{{ slot_count }} meals{% if templateweek.description %} · {{ templateweek.description }}{% endif %}
       </p>
     </div>
-    <div class="page-header__actions">
+    <div class="page-header__actions page-header__actions--row">
       {# Templates are applied from the planner ("Import template"). #}
       <a class="btn btn--secondary" href="{% url 'planner_calendar' %}">{% include "icons/calendar.svg" %}Go to planner</a>
+      {% if user.is_authenticated %}
+        <a class="btn btn--secondary" href="{% url 'templateweek_update' templateweek.pk %}">{% include "icons/pencil.svg" %}Edit</a>
+        <a class="btn btn--danger" href="{% url 'templateweek_delete' templateweek.pk %}">{% include "icons/trash.svg" %}Delete</a>
+      {% endif %}
     </div>
   </header>
 

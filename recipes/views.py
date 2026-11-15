@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, F
+from django.db.models import Count, F, ProtectedError
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -9,6 +9,8 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
+from planner.models import CalendarMeal, TemplateMeal
+
 from .models import Ingredient, Recipe, RecipeCategory
 from .forms import RecipeIngredientFormSet
 
@@ -136,7 +138,40 @@ class RecipeUpdateView(LoginRequiredMixin, UpdateView):
         return redirect(self.object.get_absolute_url())
 
 
+def _template_names(template_meals):
+    """Distinct (pk, name) of the templates these meals belong to."""
+    return list(
+        template_meals.values_list("template_id", "template__name")
+        .distinct()
+        .order_by("template__name")
+    )
+
+
 class RecipeDeleteView(LoginRequiredMixin, DeleteView):
+    """Planner and template meals PROTECT their recipe, so a recipe in use
+    can't be deleted. Say where it's used instead of crashing; Delete is only
+    offered once it's free."""
+
     model = Recipe
     template_name = "recipes/recipe_confirm_delete.html"
     success_url = reverse_lazy("recipe_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        calendar_meals = CalendarMeal.objects.filter(recipe=self.object).order_by(
+            "date"
+        )
+        template_meals = TemplateMeal.objects.filter(recipe=self.object)
+        context["calendar_dates"] = list(calendar_meals.values_list("date", flat=True))
+        context["templates_using"] = _template_names(template_meals)
+        context["in_use"] = bool(
+            context["calendar_dates"] or context["templates_using"]
+        )
+        return context
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            # Became used between opening the page and confirming.
+            return self.render_to_response(self.get_context_data())

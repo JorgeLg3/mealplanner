@@ -1,15 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}New template · Meal Planner{% endblock %}
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}New template{% endif %} · Meal Planner{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{% url 'templateweek_list' %}">{% include "icons/chevron-left.svg" %}Back to templates</a>
-  <header class="page-header">
-    <div>
-      <h1>New template</h1>
-      <p class="page-header__subtitle">Give it a name; you'll add the meals next.</p>
-    </div>
-  </header>
+  {% if object %}
+    <a class="back-link" href="{% url 'templateweek_detail' object.pk %}">{% include "icons/chevron-left.svg" %}Back to template</a>
+    <header class="page-header">
+      <div>
+        <h1>Edit template</h1>
+        <p class="page-header__subtitle">Name and description. Meals are edited on the template's page.</p>
+      </div>
+    </header>
+  {% else %}
+    <a class="back-link" href="{% url 'templateweek_list' %}">{% include "icons/chevron-left.svg" %}Back to templates</a>
+    <header class="page-header">
+      <div>
+        <h1>New template</h1>
+        <p class="page-header__subtitle">Give it a name; you'll add the meals next.</p>
+      </div>
+    </header>
+  {% endif %}
 
   <form method="post" class="panel form-narrow">
     {% csrf_token %}
@@ -25,8 +35,13 @@
       {% if form.description.errors %}<p class="field__error">{{ form.description.errors|join:" " }}</p>{% endif %}
     </div>
     <div class="form-actions">
-      <a class="btn btn--secondary" href="{% url 'templateweek_list' %}">Cancel</a>
-      <button type="submit">Create template</button>
+      {% if object %}
+        <a class="btn btn--secondary" href="{% url 'templateweek_detail' object.pk %}">Cancel</a>
+        <button type="submit">Save</button>
+      {% else %}
+        <a class="btn btn--secondary" href="{% url 'templateweek_list' %}">Cancel</a>
+        <button type="submit">Create template</button>
+      {% endif %}
     </div>
   </form>
 {% endblock %}

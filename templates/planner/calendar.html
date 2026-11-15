@@ -31,7 +31,7 @@
     </div>
 
     <nav class="day-strip" aria-label="Days of the week">
-      {% for day in weeks.0.days %}
+      {% for day in days %}
         <a class="day-strip__day{% if day.is_today %} is-today{% endif %}"
            href="#day-{{ day.date|date:'Y-m-d' }}"
            data-day="{{ day.date|date:'Y-m-d' }}">
@@ -42,13 +42,9 @@
     </nav>
   </div>
 
-  {% for week in weeks %}
-    {# Phones show only the selected week; the arrows move between weeks. #}
-    <section class="week-panel-wrap{% if not forloop.first %} week-panel-wrap--next{% endif %}"
-             aria-label="Week of {{ week.monday|date:'M j' }}">
-      {% include "planner/_week.html" with monday=week.monday days=week.days templates=templates %}
-    </section>
-  {% endfor %}
+  <section class="week-panel-wrap" aria-label="Week of {{ selected_monday|date:'M j' }}">
+    {% include "planner/_week.html" with monday=selected_monday days=days templates=templates %}
+  </section>
 
   <script src="{% static 'js/planner.js' %}" defer></script>
 {% endblock %}

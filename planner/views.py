@@ -6,10 +6,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods
 from django.views.generic import (
     CreateView,
+    DeleteView,
+    UpdateView,
     ListView,
     DetailView,
     TemplateView,
@@ -66,6 +68,26 @@ class TemplateWeekCreate(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse("templateweek_detail", args=[self.object.pk])
+
+
+class TemplateWeekUpdate(LoginRequiredMixin, UpdateView):
+    """Rename / re-describe a template. Meals are edited on its page."""
+
+    model = TemplateWeek
+    fields = ["name", "description"]
+    template_name = "planner/templateweek_form.html"
+
+    def get_success_url(self):
+        return reverse("templateweek_detail", args=[self.object.pk])
+
+
+class TemplateWeekDelete(LoginRequiredMixin, DeleteView):
+    """Delete a template and its meals (CASCADE). Planner weeks it was applied
+    to keep their meals: applying copies them into the calendar."""
+
+    model = TemplateWeek
+    template_name = "planner/templateweek_confirm_delete.html"
+    success_url = reverse_lazy("templateweek_list")
 
 
 class TemplateWeekDetail(DetailView):
@@ -184,8 +206,8 @@ def templatemeal(request, pk, weekday, meal_type):
 
 
 class PlannerCalendar(TemplateView):
-    """The selected week (``?week=`` any ISO date; defaults to this week) and
-    the one after it. Phones show only the first; desktop shows both."""
+    """One week at a time (``?week=`` any ISO date; defaults to this week),
+    on every screen size; the arrows move between weeks."""
 
     template_name = "planner/calendar.html"
 
@@ -196,11 +218,8 @@ class PlannerCalendar(TemplateView):
             selected = monday_of(datetime.date.fromisoformat(self.request.GET["week"]))
         except KeyError, ValueError:
             selected = this_monday
-        mondays = [selected, selected + datetime.timedelta(weeks=1)]
 
-        context["weeks"] = [
-            {"monday": monday, "days": _week_days(monday)} for monday in mondays
-        ]
+        context["days"] = _week_days(selected)
         context["selected_monday"] = selected
         context["selected_sunday"] = selected + datetime.timedelta(days=6)
         context["prev_monday"] = selected - datetime.timedelta(weeks=1)

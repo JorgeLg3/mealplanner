@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ object.name }} · Meal Planner{% endblock %}
+
+{% block content %}
+  <div class="auth-card">
+    <h1>Delete template?</h1>
+    <p class="text-secondary">“{{ object.name }}” and its {{ object.meals.count }} meal{{ object.meals.count|pluralize }} will be removed. Weeks you already planned with it keep their meals.</p>
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <a class="btn btn--secondary" href="{% url 'templateweek_detail' object.pk %}">Cancel</a>
+      <button type="submit" class="btn--danger-solid">Delete template</button>
+    </form>
+  </div>
+{% endblock %}

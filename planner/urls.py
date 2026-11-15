@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import (
     TemplateWeekCreate,
+    TemplateWeekDelete,
+    TemplateWeekUpdate,
     TemplateWeekList,
     TemplateWeekDetail,
     PlannerCalendar,
@@ -27,6 +29,16 @@ urlpatterns = [
     path("templates/create/", TemplateWeekCreate.as_view(), name="templateweek_create"),
     path(
         "templates/<int:pk>/", TemplateWeekDetail.as_view(), name="templateweek_detail"
+    ),
+    path(
+        "templates/<int:pk>/edit/",
+        TemplateWeekUpdate.as_view(),
+        name="templateweek_update",
+    ),
+    path(
+        "templates/<int:pk>/delete/",
+        TemplateWeekDelete.as_view(),
+        name="templateweek_delete",
     ),
     path(
         "templates/<int:pk>/cell/<int:weekday>/<str:meal_type>/",

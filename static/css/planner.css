@@ -49,10 +49,6 @@
 /* ==========================================================================
    Week panel
    ========================================================================== */
-.week-panel-wrap + .week-panel-wrap {
-  margin-top: var(--space-6);
-}
-
 .week-panel {
   padding: var(--space-5);
   background: var(--color-surface);
@@ -158,7 +154,7 @@
   gap: var(--space-1);
   min-height: 5.75rem;
   padding: var(--space-2) var(--space-3) var(--space-3);
-  background: #ffffff;
+  background: var(--color-field);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-input);
   transition: border-color var(--duration-fast) var(--ease);
@@ -597,11 +593,6 @@ button.slot__add:hover {
     color: var(--color-primary-text);
   }
 
-  /* Only the selected week; the arrows move between weeks. */
-  .week-panel-wrap--next {
-    display: none;
-  }
-
   .week-panel {
     padding: 0;
     background: none;
@@ -646,8 +637,11 @@ button.slot__add:hover {
     padding: 0;
   }
 
-  .day__name--short,
-  .day__date--short {
+  /* Must beat ".day--today .day__date--short" (the desktop today circle),
+     or today's number shows twice. */
+  .day .day__name--short,
+  .day .day__date--short,
+  .day--today .day__date--short {
     display: none;
   }
 

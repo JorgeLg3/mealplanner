@@ -103,13 +103,13 @@
     {% elif action == "shopping" %}
       {# Modal preview. Confirm/Cancel re-render the whole week region, which #}
       {# removes the dialog; Esc just closes it until the next re-render.      #}
-      <dialog class="dialog shopping-dialog" id="shopping-dialog-{{ week_iso }}">
+      <dialog class="dialog shopping-dialog" id="shopping-dialog-{{ week_iso }}" aria-labelledby="shopping-dialog-title-{{ week_iso }}">
         <form class="shopping-dialog__form"
               hx-post="{% url 'week_export_shopping_list' week_iso %}"
               hx-target="#week-{{ week_iso }}"
               hx-swap="outerHTML">
           {% csrf_token %}
-          <h2 class="shopping-dialog__title">Export shopping list</h2>
+          <h2 class="shopping-dialog__title" id="shopping-dialog-title-{{ week_iso }}">Export shopping list</h2>
           {% if error %}<p class="notice notice--error">{{ error }}</p>{% endif %}
 
           <div class="shopping-dialog__fields">

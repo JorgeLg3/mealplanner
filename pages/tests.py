@@ -53,3 +53,14 @@ class NavTests(TestCase):
         )
         self.assertIn('href="/recipes/" class="is-active"', tab_bar)
         self.assertContains(response, 'aria-label="Account menu"')
+
+
+class PolishTests(TestCase):
+    def test_login_required_redirects_to_the_real_login_page(self):
+        response = self.client.get("/todo/create/")
+        self.assertRedirects(response, "/auth/login/?next=/todo/create/")
+
+    def test_layout_loads_app_script_and_toast(self):
+        response = self.client.get("/")
+        self.assertRegex(response.content.decode(), r"/static/js/app\.[0-9a-f]+\.js")
+        self.assertContains(response, 'id="toast"')

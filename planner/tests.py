@@ -261,12 +261,16 @@ class WeekActionsTests(TestCase):
             response = self.client.get(reverse("week_actions", args=[bad]))
             self.assertEqual(response.status_code, 404)
 
-    def test_calendar_shows_action_bar_for_both_weeks(self):
-        response = self.client.get(reverse("planner_calendar"))
-        for monday in (self.monday, self.next_monday):
-            self.assertContains(
-                response, reverse("week_apply_form", args=[monday.isoformat()])
-            )
+    def test_next_week_actions_reachable_via_week_param(self):
+        response = self.client.get(
+            reverse("planner_calendar"), {"week": self.next_monday.isoformat()}
+        )
+        self.assertContains(
+            response, reverse("week_apply_form", args=[self.next_monday.isoformat()])
+        )
+        self.assertNotContains(
+            response, reverse("week_apply_form", args=[self.monday.isoformat()])
+        )
 
 
 class MealCellTests(TestCase):
@@ -362,13 +366,15 @@ class PlannerCalendarPageTests(TestCase):
         self.monday = today - datetime.timedelta(days=today.weekday())
         self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
 
-    def test_defaults_to_this_week_and_the_next(self):
+    def test_shows_one_week_defaulting_to_this_week(self):
         response = self.client.get(reverse("planner_calendar"))
         self.assertEqual(response.context["selected_monday"], self.monday)
-        self.assertEqual(
-            [w["monday"] for w in response.context["weeks"]],
-            [self.monday, self.monday + datetime.timedelta(weeks=1)],
-        )
+        days = [d["date"] for d in response.context["days"]]
+        self.assertEqual(days[0], self.monday)
+        self.assertEqual(len(days), 7)
+        self.assertContains(response, f'id="week-{self.monday.isoformat()}"', count=1)
+        next_monday = self.monday + datetime.timedelta(weeks=1)
+        self.assertNotContains(response, f'id="week-{next_monday.isoformat()}"')
         self.assertContains(response, "This week")
 
     def test_week_param_selects_that_week_and_snaps_to_monday(self):
@@ -433,7 +439,7 @@ class PlannerCalendarPageTests(TestCase):
         self.assertContains(
             response, f'hx-get="{reverse("week_apply_form", args=[iso])}"', count=2
         )
-        self.assertContains(response, 'aria-label="Template actions"', count=2)
+        self.assertContains(response, 'aria-label="Template actions"', count=1)
 
     def test_export_success_links_to_todos(self):
         recipe = Recipe.objects.create(name="Salad", description="d", servings=1)
@@ -517,3 +523,67 @@ class TemplatePagesTests(TestCase):
             reverse("templatemeal_cell", args=[self.template.pk, 2, MealType.DINNER])
         )
         self.assertContains(response, 'aria-label="Add dinner on Tuesday"')
+
+
+class TemplateEditDeleteTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+        self.template = TemplateWeek.objects.create(name="Usual", description="Old")
+        TemplateMeal.objects.create(
+            template=self.template,
+            weekday=Weekday.MONDAY,
+            meal_type=MealType.LUNCH,
+            recipe=self.recipe,
+        )
+
+    def test_detail_offers_edit_and_delete(self):
+        response = self.client.get(
+            reverse("templateweek_detail", args=[self.template.pk])
+        )
+        self.assertContains(
+            response, reverse("templateweek_update", args=[self.template.pk])
+        )
+        self.assertContains(
+            response, reverse("templateweek_delete", args=[self.template.pk])
+        )
+
+    def test_edit_renames_and_keeps_meals(self):
+        url = reverse("templateweek_update", args=[self.template.pk])
+        self.assertContains(self.client.get(url), 'value="Usual"')
+        response = self.client.post(url, {"name": "Winter", "description": "Cosy"})
+        self.assertRedirects(
+            response, reverse("templateweek_detail", args=[self.template.pk])
+        )
+        self.template.refresh_from_db()
+        self.assertEqual(
+            (self.template.name, self.template.description), ("Winter", "Cosy")
+        )
+        self.assertEqual(self.template.meals.count(), 1)
+
+    def test_delete_removes_template_and_meals_but_not_planned_weeks(self):
+        today = datetime.date.today()
+        CalendarMeal.objects.create(
+            date=today, meal_type=MealType.LUNCH, recipe=self.recipe
+        )
+        url = reverse("templateweek_delete", args=[self.template.pk])
+        self.assertContains(self.client.get(url), "1 meal will be removed")
+
+        response = self.client.post(url)
+
+        self.assertRedirects(response, reverse("templateweek_list"))
+        self.assertFalse(TemplateWeek.objects.exists())
+        self.assertFalse(TemplateMeal.objects.exists())
+        self.assertTrue(CalendarMeal.objects.filter(date=today).exists())
+
+    def test_edit_and_delete_require_login(self):
+        self.client.logout()
+        for name in ["templateweek_update", "templateweek_delete"]:
+            with self.subTest(view=name):
+                url = reverse(name, args=[self.template.pk])
+                self.assertEqual(self.client.get(url).status_code, 302)
+                self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertTrue(TemplateWeek.objects.filter(name="Usual").exists())

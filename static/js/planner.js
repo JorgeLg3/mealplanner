@@ -62,6 +62,15 @@
   const today = strip.querySelector(".is-today");
   setActive(today ? today.dataset.day : strip.querySelector("[data-day]").dataset.day);
 
+  // Phones: open the week at today's plan. Only when the strip is showing
+  // (mobile), the week contains today, and no specific day was linked to.
+  const stripVisible = getComputedStyle(strip).display !== "none";
+  if (stripVisible && today && !location.hash) {
+    const section = document.getElementById("day-" + today.dataset.day);
+    // Instant, not smooth: it's the initial position, not a movement.
+    if (section) section.scrollIntoView({ behavior: "auto", block: "start" });
+  }
+
   observe();
   // HTMX replaces whole week panels (import/export) and slots: re-observe.
   document.body.addEventListener("htmx:afterSettle", observe);

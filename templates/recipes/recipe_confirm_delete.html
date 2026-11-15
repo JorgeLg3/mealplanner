@@ -4,12 +4,29 @@
 
 {% block content %}
   <div class="auth-card">
-    <h1>Delete recipe?</h1>
-    <p class="text-secondary">“{{ object.name }}” and its ingredient list will be removed. This can't be undone.</p>
-    <form method="post" class="form-actions">
-      {% csrf_token %}
-      <a class="btn btn--secondary" href="{% url 'recipe_detail' object.pk %}">Cancel</a>
-      <button type="submit" class="btn--danger-solid">Delete recipe</button>
-    </form>
+    {% if in_use %}
+      {# Planner/template meals protect their recipe: explain instead of failing. #}
+      <h1>“{{ object.name }}” is in use</h1>
+      <p class="text-secondary">Remove it from these first, then you can delete it.</p>
+      <ul class="usage-list">
+        {% for date in calendar_dates %}
+          <li><a href="{% url 'planner_calendar' %}?week={{ date|date:'Y-m-d' }}">Planner · {{ date|date:"D j M Y" }}</a></li>
+        {% endfor %}
+        {% for template_id, template_name in templates_using %}
+          <li><a href="{% url 'templateweek_detail' template_id %}">Template · {{ template_name }}</a></li>
+        {% endfor %}
+      </ul>
+      <div class="form-actions">
+        <a class="btn btn--secondary" href="{% url 'recipe_detail' object.pk %}">Back to recipe</a>
+      </div>
+    {% else %}
+      <h1>Delete recipe?</h1>
+      <p class="text-secondary">“{{ object.name }}” and its ingredient list will be removed. This can't be undone.</p>
+      <form method="post" class="form-actions">
+        {% csrf_token %}
+        <a class="btn btn--secondary" href="{% url 'recipe_detail' object.pk %}">Cancel</a>
+        <button type="submit" class="btn--danger-solid">Delete recipe</button>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}

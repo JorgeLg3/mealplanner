@@ -158,6 +158,8 @@ STORAGES = {
 }
 
 LOGIN_REDIRECT_URL = "home"
+# Auth URLs are mounted under /auth/, not Django's default /accounts/.
+LOGIN_URL = "login"
 LOGOUT_REDIRECT_URL = "home"
 
 
