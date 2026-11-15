@@ -2,7 +2,7 @@ import re
 import datetime
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
+from accounts.models import User
 from django.test import TestCase
 from django.urls import reverse
 
@@ -29,9 +29,7 @@ from .models import (
 
 class ExportShoppingListTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.monday = datetime.date.today() - datetime.timedelta(
             days=datetime.date.today().weekday()
@@ -213,9 +211,7 @@ class ExportShoppingListTests(TestCase):
 
 class WeekActionsTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         today = datetime.date.today()
         self.monday = today - datetime.timedelta(days=today.weekday())
@@ -291,9 +287,7 @@ class WeekActionsTests(TestCase):
 
 class MealCellTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
 
@@ -375,9 +369,7 @@ class TemplateWeekListTests(LoggedInTestCase):
 
 class PlannerCalendarPageTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         today = datetime.date.today()
         self.monday = today - datetime.timedelta(days=today.weekday())
@@ -472,9 +464,7 @@ class PlannerCalendarPageTests(TestCase):
 
 class TemplatePagesTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
         self.template = TemplateWeek.objects.create(
@@ -539,9 +529,7 @@ class TemplatePagesTests(TestCase):
 
 class TemplateEditDeleteTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
         self.template = TemplateWeek.objects.create(name="Usual", description="Old")
@@ -605,9 +593,7 @@ class RecipePickerTests(TestCase):
     """The slot forms feed static/js/combobox.js via their <datalist>."""
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         Recipe.objects.create(name="Stew", description="d", servings=2)
 
@@ -634,9 +620,7 @@ class RecipePickerTests(TestCase):
 
 class ServingsTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         today = datetime.date.today()
         self.monday = today - datetime.timedelta(days=today.weekday())
@@ -762,6 +746,7 @@ class ServingsTests(TestCase):
         recipe_input = re.search(
             r'<input[^>]*name="recipe"[^>]*>', response.content.decode()
         )
+        assert recipe_input is not None
         self.assertNotIn("value=", recipe_input.group(0))
 
     def test_badge_only_for_meals_with_own_servings(self):

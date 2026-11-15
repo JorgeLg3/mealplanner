@@ -6,7 +6,7 @@ import shutil
 import tempfile
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from accounts.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -166,7 +166,7 @@ class RecipeCatalogTests(LoggedInTestCase):
 
 class RecipeFormTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(username="cook", password="x")
+        self.user = User.objects.create_user(username="cook", password="x")
         self.client.force_login(self.user)
         self.category = RecipeCategory.objects.get_or_create(name="sopas")[0]
 
@@ -248,7 +248,7 @@ class RecipeImageTests(TestCase):
         super().tearDownClass()
 
     def setUp(self):
-        self.user = get_user_model().objects.create_user(username="cook", password="x")
+        self.user = User.objects.create_user(username="cook", password="x")
         self.client.force_login(self.user)
         self.category = RecipeCategory.objects.get_or_create(name="carnes")[0]
 
@@ -269,8 +269,9 @@ class RecipeImageTests(TestCase):
     def test_upload_is_resized_and_stored_as_jpeg(self):
         self._create(image=_photo())
         recipe = Recipe.objects.get()
-        self.assertTrue(recipe.image.name.startswith("recipes/"))
-        self.assertTrue(recipe.image.name.endswith(".jpg"))
+        name = recipe.image.name or ""
+        self.assertTrue(name.startswith("recipes/"))
+        self.assertTrue(name.endswith(".jpg"))
         with Image.open(recipe.image.path) as img:
             self.assertEqual(img.format, "JPEG")
             self.assertEqual(max(img.size), Recipe.IMAGE_MAX_SIZE)
@@ -362,7 +363,7 @@ class RecipeDeleteInUseTests(TestCase):
     def setUp(self):
         from planner.models import CalendarMeal, MealType, TemplateMeal, TemplateWeek
 
-        self.user = get_user_model().objects.create_user(username="cook", password="x")
+        self.user = User.objects.create_user(username="cook", password="x")
         self.client.force_login(self.user)
         self.recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
         self.date = datetime.date(2030, 1, 9)
@@ -403,7 +404,7 @@ class RecipeDeleteInUseTests(TestCase):
 
 class IngredientPickerTests(TestCase):
     def test_ingredient_input_disables_browser_autofill(self):
-        user = get_user_model().objects.create_user(username="cook", password="x")
+        user = User.objects.create_user(username="cook", password="x")
         self.client.force_login(user)
         response = self.client.get(reverse("recipe_create"))
         self.assertContains(response, 'list="ingredient-options"')
@@ -468,10 +469,13 @@ class DefaultCategoryTests(LoggedInTestCase):
 
     def test_admin_protects_otros(self):
         from django.contrib import admin
+        from django.test import RequestFactory
 
+        request = RequestFactory().get("/admin/")
+        request.user = self.user
         model_admin = admin.site._registry[RecipeCategory]
         self.assertFalse(
-            model_admin.has_delete_permission(None, RecipeCategory.other())
+            model_admin.has_delete_permission(request, RecipeCategory.other())
         )
 
     def test_list_headings_and_sidebar_are_capitalized(self):

@@ -47,7 +47,8 @@ class RecipeListView(ListView):
             for c in RecipeCategory.objects.annotate(
                 recipe_count=Count("recipe")
             ).order_by(other_last("name"), "name")
-            if c.recipe_count or str(c.pk) == self.category
+            # recipe_count comes from annotate(), which type checkers can't see.
+            if c.recipe_count or str(c.pk) == self.category  # ty: ignore[unresolved-attribute]
         ]
         selected = next((c for c in categories if str(c.pk) == self.category), None)
         context.update(

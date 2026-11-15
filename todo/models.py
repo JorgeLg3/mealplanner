@@ -1,8 +1,13 @@
 import calendar
 import datetime
+from typing import TYPE_CHECKING
 
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+
+if TYPE_CHECKING:
+    # Attributes Django adds at runtime (for type checkers; no runtime effect).
+    from django.db.models.fields.related_descriptors import RelatedManager
 
 
 def add_months(date, months):
@@ -34,6 +39,9 @@ class RecurringTodo(models.Model):
     # Due date of the most recently generated todo; the next one comes after it.
     last_due = models.DateField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    if TYPE_CHECKING:
+        todos: "RelatedManager[Todo]"
 
     class Meta:
         ordering = ["name"]
@@ -142,6 +150,10 @@ class Todo(models.Model):
         blank=True,
         related_name="todos",
     )
+
+    if TYPE_CHECKING:
+        subtasks: "RelatedManager[Subtask]"
+        recurring_id: int | None
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -178,6 +190,9 @@ class Subtask(models.Model):
     # keep the preview's category order.
     position = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    if TYPE_CHECKING:
+        todo_id: int
 
     class Meta:
         # Open before done, then in list order.

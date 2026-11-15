@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,7 +35,7 @@ def _group_by_due_date(todos):
     groups. "Later" starts collapsed."""
     today = datetime.date.today()
     sunday = today + datetime.timedelta(days=6 - today.weekday())
-    groups = {
+    groups: dict[str, dict[str, Any]] = {
         "overdue": {"label": "Overdue", "open": True, "todos": []},
         "week": {"label": "This week", "open": True, "todos": []},
         "later": {"label": "Later", "open": False, "todos": []},
@@ -251,6 +252,7 @@ class RecurringTodoCreate(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        assert self.object is not None  # set by super().form_valid
         self.object.ensure_open_todo()
         return response
 

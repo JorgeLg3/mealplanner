@@ -71,7 +71,7 @@ uv run ty check
 uv run manage.py test
 ```
 
-`ty` reports errors like ``Class `Recipe` has no attribute `objects` ``. That's because it doesn't understand the Django managers, it's not a bug in the code.
+The CI runs the same checks, and `ty` must pass with no errors. `ty` uses `django-stubs` for the Django types, but it doesn't run its mypy plugin, so the attributes Django adds at runtime (reverse relations like `todo.subtasks`, `recipe_id` fields, `get_FOO_display()`) are declared in the models inside an `if TYPE_CHECKING:` block. If you add a new one, declare it there too.
 
 ## Deployment
 The `release.yml` workflow will build and push the docker image to Github container registry. From where you can later consume it. You can then create a production compose file with something like this:

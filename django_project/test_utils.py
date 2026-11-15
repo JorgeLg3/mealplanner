@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from accounts.models import User
 from django.test import TestCase
 
 
@@ -8,7 +8,5 @@ class LoggedInTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = get_user_model().objects.create_user(
-            username="member", password="x"
-        )
+        self.user = User.objects.create_user(username="member", password="x")
         self.client.force_login(self.user)

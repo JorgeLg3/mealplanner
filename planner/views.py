@@ -75,6 +75,7 @@ class TemplateWeekCreate(LoginRequiredMixin, CreateView):
     template_name = "planner/templateweek_form.html"
 
     def get_success_url(self):
+        assert self.object is not None  # set by form_valid
         return reverse("templateweek_detail", args=[self.object.pk])
 
 

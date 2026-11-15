@@ -1,10 +1,15 @@
 import io
 import os
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
+
+if TYPE_CHECKING:
+    # Attributes Django adds at runtime (for type checkers; no runtime effect).
+    from django.db.models.fields.related_descriptors import RelatedManager
 from django.db.models.functions import Lower
 from django.urls import reverse
 
@@ -95,6 +100,9 @@ class Recipe(models.Model):
         upload_to="recipes/", blank=True, validators=[validate_image_size]
     )
 
+    if TYPE_CHECKING:
+        recipeingredient_set: "RelatedManager[RecipeIngredient]"
+
     # Longest side of stored photos. Phone photos are resized on upload so
     # the list stays light on mobile data.
     IMAGE_MAX_SIZE = 1200
@@ -110,7 +118,8 @@ class Recipe(models.Model):
                 .values_list("image", flat=True)
                 .first()
             )
-        if self.image and not self.image._committed:
+        # A freshly assigned upload isn't committed to storage yet.
+        if self.image and not getattr(self.image, "_committed", True):
             self._shrink_image()
         super().save(*args, **kwargs)
         # Replaced or cleared: delete the old file so media/ doesn't fill up.
@@ -135,7 +144,9 @@ class Recipe(models.Model):
                 img = img.convert("RGB")
             buffer = io.BytesIO()
             img.save(buffer, format="JPEG", quality=85, optimize=True)
-        name = os.path.splitext(os.path.basename(self.image.name))[0] + ".jpg"
+        name = (
+            os.path.splitext(os.path.basename(self.image.name or "photo"))[0] + ".jpg"
+        )
         self.image = ContentFile(buffer.getvalue(), name=name)
 
     def get_absolute_url(self):
@@ -206,6 +217,10 @@ class RecipeIngredient(models.Model):
         blank=True,
     )
     prep_note = models.CharField(max_length=255, null=True, blank=True)
+
+    if TYPE_CHECKING:
+        recipe_id: int
+        ingredient_id: int
 
     def __str__(self):
         return f"{self.quantity or ''} {self.unit or ''} {self.ingredient}".strip()

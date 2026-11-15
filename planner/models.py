@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from recipes.models import Recipe
+
+if TYPE_CHECKING:
+    # Attributes Django adds at runtime (for type checkers; no runtime effect).
+    from django.db.models.fields.related_descriptors import RelatedManager
 
 
 MAX_SERVINGS = 50
@@ -29,6 +35,9 @@ class TemplateWeek(models.Model):
     description = models.TextField(blank=True)
     is_featured = models.BooleanField(default=False)
     featured_order = models.PositiveIntegerField(null=True, blank=True)
+
+    if TYPE_CHECKING:
+        meals: "RelatedManager[TemplateMeal]"
 
     def __str__(self):
         return self.name
@@ -74,6 +83,12 @@ class TemplateMeal(models.Model):
         TemplateWeek, on_delete=models.CASCADE, related_name="meals"
     )
 
+    if TYPE_CHECKING:
+        recipe_id: int
+
+        def get_meal_type_display(self) -> str: ...
+        def get_weekday_display(self) -> str: ...
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -94,6 +109,11 @@ class CalendarMeal(models.Model):
     date = models.DateField()
     recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT)
     servings = servings_field()
+
+    if TYPE_CHECKING:
+        recipe_id: int
+
+        def get_meal_type_display(self) -> str: ...
 
     class Meta:
         constraints = [

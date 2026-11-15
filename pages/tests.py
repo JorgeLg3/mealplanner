@@ -1,7 +1,7 @@
 import datetime
 import re
 
-from django.contrib.auth import get_user_model
+from accounts.models import User
 from django.test import SimpleTestCase, TestCase
 
 from django_project.test_utils import LoggedInTestCase
@@ -36,7 +36,7 @@ class NavTests(LoggedInTestCase):
         self.assertContains(response, "Log in")
         self.assertNotContains(response, "Sign up")
 
-        user = get_user_model().objects.create_user(username="jorge", password="x")
+        user = User.objects.create_user(username="jorge", password="x")
         self.client.force_login(user)
         response = self.client.get("/")
         self.assertContains(response, "Log out")
@@ -68,7 +68,7 @@ class PolishTests(TestCase):
         self.assertContains(response, 'id="toast"')
 
     def test_mobile_avatar_shows_user_initial(self):
-        user = get_user_model().objects.create_user(username="jorge", password="x")
+        user = User.objects.create_user(username="jorge", password="x")
         self.client.force_login(user)
         response = self.client.get("/")
         self.assertContains(response, 'aria-label="Account menu for jorge"')
@@ -106,7 +106,7 @@ class LoginRequiredTests(TestCase):
         self.assertNotContains(response, 'class="tab-bar"')
 
     def test_login_then_lands_on_requested_page(self):
-        get_user_model().objects.create_user(username="jorge", password="pw-12345!")
+        User.objects.create_user(username="jorge", password="pw-12345!")
         response = self.client.post(
             "/auth/login/?next=/recipes/",
             {"username": "jorge", "password": "pw-12345!", "next": "/recipes/"},

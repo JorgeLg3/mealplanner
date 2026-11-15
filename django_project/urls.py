@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import URLPattern, URLResolver, include, path
 
-urlpatterns = [
+urlpatterns: list[URLPattern | URLResolver] = [
     path("", include("pages.urls")),
     path("recipes/", include("recipes.urls")),
     path("planner/", include("planner.urls")),

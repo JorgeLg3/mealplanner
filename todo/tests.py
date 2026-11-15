@@ -1,6 +1,6 @@
 import datetime
 
-from django.contrib.auth import get_user_model
+from accounts.models import User
 from django.test import TestCase
 from django.urls import reverse
 
@@ -13,9 +13,7 @@ from .views import DONE_PAGE_SIZE
 
 class ToggleTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.todo = Todo.objects.create(name="Groceries")
         self.subtask = Subtask.objects.create(todo=self.todo, name="Milk")
 
@@ -117,9 +115,7 @@ class ToggleTests(TestCase):
 
 class TodoCrudTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.todo = Todo.objects.create(name="Groceries")
 
@@ -189,9 +185,7 @@ class TodoCrudTests(TestCase):
 
 class SubtaskCrudTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.todo = Todo.objects.create(name="Groceries")
         self.subtask = Subtask.objects.create(todo=self.todo, name="Milk")
@@ -316,9 +310,7 @@ class GroupingTests(LoggedInTestCase):
 
 class DonePageTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
 
     def test_toggle_sets_and_clears_completed_at(self):
@@ -361,9 +353,7 @@ class DonePageTests(TestCase):
 
 class EditRegroupTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.todo = Todo.objects.create(name="Bins")
 
@@ -452,9 +442,7 @@ class RecurrenceScheduleTests(TestCase):
 
 class RecurringFlowTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.today = datetime.date.today()
         # A weekly task anchored on this week's Monday.
@@ -641,9 +629,7 @@ class RecurringFlowTests(TestCase):
 
 class TodoLayoutTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
 
     def test_tabs_mark_the_current_view(self):
@@ -684,9 +670,7 @@ class TodoLayoutTests(TestCase):
 
 class SubtaskOrderTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username="tester", password="x"
-        )
+        self.user = User.objects.create_user(username="tester", password="x")
         self.client.force_login(self.user)
         self.todo = Todo.objects.create(name="Groceries")
 
