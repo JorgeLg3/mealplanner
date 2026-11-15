@@ -1,10 +1,10 @@
 import datetime
-from collections import Counter
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import Http404, HttpResponseNotAllowed
+from django.http import Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_http_methods
@@ -16,9 +16,17 @@ from django.views.generic import (
     DetailView,
     TemplateView,
 )
-from recipes.models import Recipe, RecipeIngredient
+from recipes.models import Recipe, RecipeIngredient, Unit
 from todo.models import Subtask, Todo
-from .models import TemplateWeek, TemplateMeal, MealType, Weekday, CalendarMeal
+from .models import (
+    MAX_SERVINGS,
+    CalendarMeal,
+    HouseholdSettings,
+    MealType,
+    TemplateMeal,
+    TemplateWeek,
+    Weekday,
+)
 
 
 def build_days(meals):
@@ -108,6 +116,67 @@ def _meal_label(meal_type):
     return MealType(meal_type).label
 
 
+def _servings_from_post(request, default_servings):
+    """Read the slot form's servings stepper. Returns (servings, error).
+    servings is None for "use the household default" (blank, or equal to the
+    default, so the meal keeps following it if the default changes)."""
+    raw = (request.POST.get("servings") or "").strip()
+    if not raw:
+        return None, ""
+    try:
+        servings = int(raw)
+    except ValueError:
+        return None, "Servings must be a number."
+    if not 1 <= servings <= MAX_SERVINGS:
+        return None, f"Servings must be between 1 and {MAX_SERVINGS}."
+    return (None if servings == default_servings else servings), ""
+
+
+def _slot_form_context(base, meal, default_servings, recipes=None, error=""):
+    """Context for the add/replace form: stepper starts at the meal's servings
+    (or the default); the recipe input stays empty (swap = pick something new)
+    but says the current recipe is kept if left blank."""
+    return {
+        **base,
+        "recipes": recipes if recipes is not None else Recipe.objects.order_by("name"),
+        "current_meal": meal,
+        "servings_value": (
+            meal.servings if meal and meal.servings else default_servings
+        ),
+        "default_servings": default_servings,
+        "max_servings": MAX_SERVINGS,
+        "error": error,
+    }
+
+
+def _save_slot(request, meal, create_or_update, base, form_template, cell_template):
+    """Shared POST logic for calendar and template slots.
+
+    - recipe picked: create/replace the slot with it and the stepper's servings
+    - recipe blank on a filled slot: keep the recipe, update servings only
+    - otherwise: re-render the form with an error
+    """
+    default_servings = HouseholdSettings.get().default_servings
+    servings, error = _servings_from_post(request, default_servings)
+    recipe_name = (request.POST.get("recipe") or "").strip()
+    recipe = (
+        Recipe.objects.filter(name__iexact=recipe_name).first() if recipe_name else None
+    )
+    if not error and recipe is None:
+        if recipe_name or meal is None:
+            error = "Pick a recipe from the list."
+        else:
+            recipe = meal.recipe
+    if error:
+        context = _slot_form_context(base, meal, default_servings, error=error)
+        if "servings" in request.POST:
+            context["servings_value"] = request.POST["servings"]
+        return render(request, form_template, context)
+
+    meal = create_or_update(recipe, servings)
+    return render(request, cell_template, {**base, "meal": meal})
+
+
 def _cell_context(templateweek, weekday, meal_type, meal=None):
     return {
         "templateweek_pk": templateweek.pk,
@@ -151,57 +220,58 @@ def templatemeal_cell(request, pk, weekday, meal_type):
 @login_required
 @require_http_methods(["GET"])
 def templatemeal_form(request, pk, weekday, meal_type):
-    """Return the add/swap form partial. The input is intentionally empty even
-    when the slot is filled — swap means pick something new; Cancel re-renders
-    the cell to recover the current meal."""
+    """Return the add/replace form partial. The recipe input is intentionally
+    empty even when the slot is filled (swap means pick something new);
+    Cancel re-renders the cell to recover the current meal."""
     templateweek = _validate_slot(pk, weekday, meal_type)
     if templateweek is None:
         return HttpResponseNotAllowed(["GET"])
-    context = _cell_context(templateweek, weekday, meal_type)
-    context["recipes"] = Recipe.objects.order_by("name")
+    meal = (
+        TemplateMeal.objects.filter(
+            template=templateweek, weekday=weekday, meal_type=meal_type
+        )
+        .select_related("recipe")
+        .first()
+    )
+    context = _slot_form_context(
+        _cell_context(templateweek, weekday, meal_type),
+        meal,
+        HouseholdSettings.get().default_servings,
+    )
     return render(request, "planner/_meal_form.html", context)
 
 
 @login_required
 @require_http_methods(["POST", "DELETE"])
 def templatemeal(request, pk, weekday, meal_type):
-    """POST creates the meal from the submitted recipe name; DELETE removes it.
-    Both return the cell partial in its new state for HTMX to swap in."""
+    """POST creates/replaces the meal's recipe; DELETE removes it. Both
+    return the cell partial in its new state for HTMX to swap in. (Templates
+    have no servings: applied meals use the household default.)"""
     templateweek = _validate_slot(pk, weekday, meal_type)
     if templateweek is None:
         return HttpResponseNotAllowed(["POST", "DELETE"])
+    slot = {"template": templateweek, "weekday": weekday, "meal_type": meal_type}
+    base = _cell_context(templateweek, weekday, meal_type)
 
     if request.method == "DELETE":
-        TemplateMeal.objects.filter(
-            template=templateweek, weekday=weekday, meal_type=meal_type
-        ).delete()
-        return render(
-            request,
-            "planner/_meal_cell.html",
-            _cell_context(templateweek, weekday, meal_type),
+        TemplateMeal.objects.filter(**slot).delete()
+        return render(request, "planner/_meal_cell.html", base)
+
+    def create_or_update(recipe, servings):
+        # Templates don't store servings; only calendar meals do.
+        meal, _ = TemplateMeal.objects.update_or_create(
+            **slot, defaults={"recipe": recipe}
         )
+        return meal
 
-    # POST: create (or replace) the meal for this slot.
-    recipe_name = (request.POST.get("recipe") or "").strip()
-    recipe = (
-        Recipe.objects.filter(name__iexact=recipe_name).first() if recipe_name else None
-    )
-    if recipe is None:
-        context = _cell_context(templateweek, weekday, meal_type)
-        context["recipes"] = Recipe.objects.order_by("name")
-        context["error"] = "Pick a recipe from the list."
-        return render(request, "planner/_meal_form.html", context)
-
-    meal, _ = TemplateMeal.objects.update_or_create(
-        template=templateweek,
-        weekday=weekday,
-        meal_type=meal_type,
-        defaults={"recipe": recipe},
-    )
-    return render(
+    meal = TemplateMeal.objects.filter(**slot).select_related("recipe").first()
+    return _save_slot(
         request,
+        meal,
+        create_or_update,
+        base,
+        "planner/_meal_form.html",
         "planner/_meal_cell.html",
-        _cell_context(templateweek, weekday, meal_type, meal),
     )
 
 
@@ -226,6 +296,8 @@ class PlannerCalendar(TemplateView):
         context["next_monday"] = selected + datetime.timedelta(weeks=1)
         context["this_monday"] = this_monday
         context["templates"] = TemplateWeek.objects.order_by("name")
+        context["default_servings"] = HouseholdSettings.get().default_servings
+        context["max_servings"] = MAX_SERVINGS
         return context
 
 
@@ -271,55 +343,56 @@ def calendarmeal_cell(request, date, meal_type):
 @login_required
 @require_http_methods(["GET"])
 def calendarmeal_form(request, date, meal_type):
-    """Return the add/swap form partial. The input is intentionally empty even
-    when the slot is filled — swap means pick something new; Cancel re-renders
-    the cell to recover the current meal."""
+    """Return the add/replace form partial. The recipe input is intentionally
+    empty even when the slot is filled (swap means pick something new);
+    leaving it blank keeps the recipe and only updates servings. Cancel
+    re-renders the cell to recover the current meal."""
     date = _validate_calendar_slot(date, meal_type)
     if date is None:
         return HttpResponseNotAllowed(["GET"])
-    context = _calendar_cell_context(date, meal_type)
-    context["recipes"] = Recipe.objects.order_by("name")
+    meal = (
+        CalendarMeal.objects.filter(date=date, meal_type=meal_type)
+        .select_related("recipe")
+        .first()
+    )
+    context = _slot_form_context(
+        _calendar_cell_context(date, meal_type),
+        meal,
+        HouseholdSettings.get().default_servings,
+    )
     return render(request, "planner/_calendar_form.html", context)
 
 
 @login_required
 @require_http_methods(["POST", "DELETE"])
 def calendarmeal(request, date, meal_type):
-    """POST creates (or replaces) the meal for this slot from the submitted
-    recipe name; DELETE removes it. Both return the cell partial in its new
-    state for HTMX to swap in."""
+    """POST creates/replaces the meal (or just its servings, see _save_slot);
+    DELETE removes it. Both return the cell partial in its new state for
+    HTMX to swap in."""
     date = _validate_calendar_slot(date, meal_type)
     if date is None:
         return HttpResponseNotAllowed(["POST", "DELETE"])
+    slot = {"date": date, "meal_type": meal_type}
+    base = _calendar_cell_context(date, meal_type)
 
     if request.method == "DELETE":
-        CalendarMeal.objects.filter(date=date, meal_type=meal_type).delete()
-        return render(
-            request,
-            "planner/_calendar_cell.html",
-            _calendar_cell_context(date, meal_type),
+        CalendarMeal.objects.filter(**slot).delete()
+        return render(request, "planner/_calendar_cell.html", base)
+
+    def create_or_update(recipe, servings):
+        meal, _ = CalendarMeal.objects.update_or_create(
+            **slot, defaults={"recipe": recipe, "servings": servings}
         )
+        return meal
 
-    # POST: create (or replace) the meal for this slot.
-    recipe_name = (request.POST.get("recipe") or "").strip()
-    recipe = (
-        Recipe.objects.filter(name__iexact=recipe_name).first() if recipe_name else None
-    )
-    if recipe is None:
-        context = _calendar_cell_context(date, meal_type)
-        context["recipes"] = Recipe.objects.order_by("name")
-        context["error"] = "Pick a recipe from the list."
-        return render(request, "planner/_calendar_form.html", context)
-
-    meal, _ = CalendarMeal.objects.update_or_create(
-        date=date,
-        meal_type=meal_type,
-        defaults={"recipe": recipe},
-    )
-    return render(
+    meal = CalendarMeal.objects.filter(**slot).select_related("recipe").first()
+    return _save_slot(
         request,
+        meal,
+        create_or_update,
+        base,
+        "planner/_calendar_form.html",
         "planner/_calendar_cell.html",
-        _calendar_cell_context(date, meal_type, meal),
     )
 
 
@@ -444,6 +517,8 @@ def week_apply_template(request, monday):
                 date=monday + datetime.timedelta(days=meal.weekday - 1),
                 meal_type=meal.meal_type,
                 recipe=meal.recipe,
+                # Templates have no servings: applied meals follow the
+                # household default until changed in the planner.
             )
             for meal in template.meals.select_related("recipe")
         ]
@@ -470,17 +545,42 @@ def _format_quantity(quantity):
     return f"{quantity.normalize():f}"
 
 
+def _round_quantity(quantity, unit):
+    """Scaled amounts: countable things (and unitless amounts like "2") round
+    UP to whole numbers, since half an onion isn't something you buy. Weights
+    and volumes get a sensible precision: whole numbers from 10 up (133 g),
+    one decimal from 1 (1.3 kg), two below (0.25 l)."""
+    if unit is None or unit.unit_type == Unit.UnitType.COUNT:
+        return quantity.to_integral_value(rounding=ROUND_CEILING)
+    if quantity >= 10:
+        step = Decimal("1")
+    elif quantity >= 1:
+        step = Decimal("0.1")
+    else:
+        step = Decimal("0.01")
+    return quantity.quantize(step, rounding=ROUND_HALF_UP)
+
+
 def _shopping_items(dates):
     """One entry per distinct ingredient scheduled on ``dates``, sorted by
-    ingredient category (uncategorized last) then name. Quantities are summed
-    per unit, without converting between units, e.g. "1 ud + 300 g". A recipe
-    scheduled twice counts twice."""
-    meals_per_recipe = Counter(
-        CalendarMeal.objects.filter(date__in=dates).values_list("recipe_id", flat=True)
-    )
+    ingredient category (uncategorized last) then name. Each meal's
+    ingredients are scaled by (meal servings / recipe servings), where meal
+    servings falls back to the household default. Quantities are then summed
+    per unit, without converting between units, e.g. "1 ud + 300 g", and
+    rounded once at the end."""
+    default_servings = HouseholdSettings.get().default_servings
+    meals = list(CalendarMeal.objects.filter(date__in=dates).select_related("recipe"))
+    factors_by_recipe = {}
+    for meal in meals:
+        made = meal.recipe.servings or 1  # guard against 0-serving recipes
+        eaten = meal.servings or default_servings
+        factors_by_recipe.setdefault(meal.recipe_id, []).append(
+            Decimal(eaten) / Decimal(made)
+        )
+
     by_ingredient = {}
     for row in (
-        RecipeIngredient.objects.filter(recipe_id__in=meals_per_recipe)
+        RecipeIngredient.objects.filter(recipe_id__in=factors_by_recipe)
         .select_related("ingredient__category", "unit")
         .order_by("pk")
     ):
@@ -489,7 +589,7 @@ def _shopping_items(dates):
         )
         if row.quantity is not None:
             totals = entry["totals"]
-            added = row.quantity * meals_per_recipe[row.recipe_id]
+            added = row.quantity * sum(factors_by_recipe[row.recipe_id])
             totals[row.unit] = totals.get(row.unit, 0) + added
 
     items = []
@@ -497,7 +597,9 @@ def _shopping_items(dates):
         ingredient = entry["ingredient"]
         # Units keep the order they first appear in (rows are ordered by pk).
         amounts = " + ".join(
-            f"{_format_quantity(qty)} {unit}" if unit else _format_quantity(qty)
+            f"{_format_quantity(_round_quantity(qty, unit))} {unit}"
+            if unit
+            else _format_quantity(_round_quantity(qty, unit))
             for unit, qty in entry["totals"].items()
         )
         name = ingredient.name.capitalize()
@@ -600,3 +702,21 @@ def week_update_template(request, monday):
     dates = _week_dates(monday)
     _copy_week_into_template(template, dates)
     return _render_week(request, monday, message=f"Updated “{template.name}”.")
+
+
+@login_required
+@require_http_methods(["POST"])
+def household_servings(request):
+    """Set how many people the household usually cooks for. Reloads the page:
+    every meal without its own servings follows the new default."""
+    settings = HouseholdSettings.get()
+    try:
+        value = int(request.POST.get("default_servings", ""))
+    except ValueError:
+        value = 0
+    if 1 <= value <= MAX_SERVINGS:
+        settings.default_servings = value
+        settings.save(update_fields=["default_servings"])
+    response = HttpResponse("")
+    response["HX-Refresh"] = "true"
+    return response

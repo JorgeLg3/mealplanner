@@ -10,6 +10,31 @@
 {% block content %}
   <header class="page-header planner-header">
     <h1 class="page-title">{% include "icons/calendar.svg" %}Meal calendar</h1>
+    {% if user.is_authenticated %}
+      {# Household default, collapsed to "👥 2"; the stepper opens on click.  #}
+      {# Meals without their own servings follow it.                         #}
+      <details class="menu household-servings">
+        <summary class="btn btn--secondary household-servings__toggle"
+                 aria-label="Cooking for {{ default_servings }}. Change">
+          {% include "icons/users.svg" %}<span class="household-servings__value">{{ default_servings }}</span>
+        </summary>
+        <div class="menu__items household-servings__panel">
+          <form hx-post="{% url 'household_servings' %}" hx-trigger="change delay:400ms">
+            {% csrf_token %}
+            <label for="household-servings-input">Cooking for</label>
+            <div class="stepper">
+              <button type="button" class="icon-btn stepper__btn" aria-label="Fewer people"
+                      onclick="const i=this.nextElementSibling; i.stepDown(); i.dispatchEvent(new Event('change', {bubbles: true}))">{% include "icons/minus.svg" %}</button>
+              <input type="number" id="household-servings-input" name="default_servings" value="{{ default_servings }}"
+                     min="1" max="{{ max_servings }}" inputmode="numeric" class="stepper__input">
+              <button type="button" class="icon-btn stepper__btn" aria-label="More people"
+                      onclick="const i=this.previousElementSibling; i.stepUp(); i.dispatchEvent(new Event('change', {bubbles: true}))">{% include "icons/plus.svg" %}</button>
+            </div>
+            <p class="field__help">Meals without their own servings follow this.</p>
+          </form>
+        </div>
+      </details>
+    {% endif %}
   </header>
 
   {# Week bar: label + prev/next. On phones it's sticky and adds a Mon–Sun   #}

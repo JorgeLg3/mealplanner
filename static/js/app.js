@@ -50,7 +50,10 @@
 
   // Picking an item inside a menu closes it too.
   document.addEventListener("click", (event) => {
-    const item = event.target.closest(".menu__items button, .menu__items a");
+    // (Controls like a stepper inside a menu panel keep it open.)
+    const item = event.target.closest(
+      ".menu__items button:not(.stepper__btn), .menu__items a"
+    );
     if (item) {
       const menu = item.closest("details.menu");
       if (menu) menu.removeAttribute("open");

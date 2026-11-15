@@ -1,5 +1,6 @@
 {# Inline add/replace form for a single calendar slot, swapped into the cell. #}
-{# Opens empty even when replacing: Cancel re-renders the current meal.      #}
+{# Opens empty even when replacing (blank keeps the recipe and only updates  #}
+{# servings); Cancel re-renders the current meal.      #}
 {# Context: date, meal_type, meal_type_label, recipes, error (optional)      #}
 {% with slot_id=date|date:'Y-m-d'|add:"-"|add:meal_type %}
 <div class="slot slot--editing" id="cell-{{ slot_id }}">
@@ -14,17 +15,27 @@
            id="recipe-{{ slot_id }}"
            name="recipe"
            list="recipes-{{ slot_id }}"
-           placeholder="Search recipe…"
+           placeholder="{% if current_meal %}Keep {{ current_meal.recipe.name }}, or search…{% else %}Search recipe…{% endif %}"
            autocomplete="off"
            data-autosubmit
            data-empty-text="No matching recipe"
            autofocus
-           required>
+           {% if not current_meal %}required{% endif %}>
     <datalist id="recipes-{{ slot_id }}">
       {% for recipe in recipes %}
         <option value="{{ recipe.name }}"></option>
       {% endfor %}
     </datalist>
+    {# Servings for this meal; starts at its own value or the household default. #}
+    <div class="stepper" role="group" aria-label="Servings">
+      <button type="button" class="icon-btn stepper__btn" aria-label="Fewer servings"
+              onclick="this.nextElementSibling.stepDown()">{% include "icons/minus.svg" %}</button>
+      <input type="number" name="servings" value="{{ servings_value }}" min="1" max="{{ max_servings }}"
+             inputmode="numeric" aria-label="Servings" class="stepper__input">
+      <button type="button" class="icon-btn stepper__btn" aria-label="More servings"
+              onclick="this.previousElementSibling.stepUp()">{% include "icons/plus.svg" %}</button>
+      <span class="stepper__unit" aria-hidden="true">{% include "icons/users.svg" %}</span>
+    </div>
     {% if error %}<p class="field__error">{{ error }}</p>{% endif %}
     <div class="slot__form-actions">
       <button type="submit" class="btn--sm">Save</button>

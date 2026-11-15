@@ -1,3 +1,4 @@
+import re
 import datetime
 from decimal import Decimal
 
@@ -14,7 +15,14 @@ from recipes.models import (
 )
 from todo.models import Todo
 
-from .models import CalendarMeal, MealType, TemplateMeal, TemplateWeek, Weekday
+from .models import (
+    CalendarMeal,
+    HouseholdSettings,
+    MealType,
+    TemplateMeal,
+    TemplateWeek,
+    Weekday,
+)
 
 
 class ExportShoppingListTests(TestCase):
@@ -623,3 +631,166 @@ class RecipePickerTests(TestCase):
         self.assertRegex(
             response.content.decode(), r"/static/js/combobox\.[0-9a-f]+\.js"
         )
+
+
+class ServingsTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        today = datetime.date.today()
+        self.monday = today - datetime.timedelta(days=today.weekday())
+        self.iso = self.monday.isoformat()
+        self.grams = Unit.objects.create(
+            name="gram", abbreviation="g", unit_type=Unit.UnitType.MASS
+        )
+        self.units = Unit.objects.create(
+            name="unit", abbreviation="ud", unit_type=Unit.UnitType.COUNT
+        )
+        # A stew written for 4 people.
+        self.stew = Recipe.objects.create(name="Stew", description="d", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=self.stew,
+            ingredient=Ingredient.objects.create(name="beef"),
+            quantity=Decimal("400"),
+            unit=self.grams,
+        )
+        RecipeIngredient.objects.create(
+            recipe=self.stew,
+            ingredient=Ingredient.objects.create(name="onion"),
+            quantity=Decimal("3"),
+            unit=self.units,
+        )
+
+    def _labels(self):
+        response = self.client.get(reverse("week_shopping_form", args=[self.iso]))
+        return sorted(i["label"] for i in response.context["items"])
+
+    def _plan(self, servings=None, day=0, meal_type=MealType.LUNCH):
+        return CalendarMeal.objects.create(
+            date=self.monday + datetime.timedelta(days=day),
+            meal_type=meal_type,
+            recipe=self.stew,
+            servings=servings,
+        )
+
+    def test_household_default_is_two(self):
+        self.assertEqual(HouseholdSettings.get().default_servings, 2)
+
+    def test_scales_to_household_default(self):
+        self._plan()
+        # 2 of 4 servings: half the beef; 1.5 onions round UP to 2.
+        self.assertEqual(self._labels(), ["Beef: 200 g", "Onion: 2 ud"])
+
+    def test_per_meal_servings_override_default(self):
+        self._plan(servings=6)
+        self.assertEqual(self._labels(), ["Beef: 600 g", "Onion: 5 ud"])
+
+    def test_meals_add_up_then_round_once(self):
+        self._plan()  # 2 servings
+        self._plan(servings=3, meal_type=MealType.DINNER)  # 3 servings
+        # 5/4 of the recipe: 500 g beef, 3.75 -> 4 onions.
+        self.assertEqual(self._labels(), ["Beef: 500 g", "Onion: 4 ud"])
+
+    def test_mass_rounding_precision(self):
+        HouseholdSettings.objects.update_or_create(
+            pk=1, defaults={"default_servings": 3}
+        )
+        self._plan()
+        # 400 * 3/4 = 300 exactly; a 3-serving recipe gives repeating decimals.
+        self.stew.servings = 7
+        self.stew.save()
+        labels = self._labels()
+        self.assertIn("Beef: 171 g", labels)  # 400 * 3/7 = 171.43 -> 171
+
+    def test_changing_default_updates_meals_without_own_servings(self):
+        self._plan()
+        self.client.post(reverse("household_servings"), {"default_servings": 4})
+        self.assertEqual(HouseholdSettings.get().default_servings, 4)
+        self.assertEqual(self._labels(), ["Beef: 400 g", "Onion: 3 ud"])
+
+    def test_household_endpoint_reloads_and_rejects_bad_values(self):
+        response = self.client.post(
+            reverse("household_servings"), {"default_servings": 3}
+        )
+        self.assertEqual(response["HX-Refresh"], "true")
+        for bad in ["0", "999", "lots"]:
+            self.client.post(reverse("household_servings"), {"default_servings": bad})
+        self.assertEqual(HouseholdSettings.get().default_servings, 3)
+
+    def test_slot_form_saves_servings_and_default_is_stored_as_empty(self):
+        url = reverse("calendarmeal", args=[self.iso, MealType.LUNCH])
+        self.client.post(url, {"recipe": "Stew", "servings": "5"})
+        self.assertEqual(CalendarMeal.objects.get().servings, 5)
+        self.client.post(url, {"recipe": "Stew", "servings": "2"})
+        self.assertIsNone(CalendarMeal.objects.get().servings)
+
+    def test_blank_recipe_on_filled_slot_updates_only_servings(self):
+        self._plan()
+        response = self.client.post(
+            reverse("calendarmeal", args=[self.iso, MealType.LUNCH]),
+            {"recipe": "", "servings": "4"},
+        )
+        meal = CalendarMeal.objects.get()
+        self.assertEqual((meal.recipe, meal.servings), (self.stew, 4))
+        self.assertContains(response, 'title="4 servings"')
+
+    def test_blank_recipe_on_empty_slot_is_an_error(self):
+        response = self.client.post(
+            reverse("calendarmeal", args=[self.iso, MealType.LUNCH]),
+            {"recipe": "", "servings": "4"},
+        )
+        self.assertContains(response, "Pick a recipe from the list.")
+        self.assertFalse(CalendarMeal.objects.exists())
+
+    def test_invalid_servings_keeps_form_open(self):
+        response = self.client.post(
+            reverse("calendarmeal", args=[self.iso, MealType.LUNCH]),
+            {"recipe": "Stew", "servings": "0"},
+        )
+        self.assertContains(response, "Servings must be between 1 and 50.")
+        self.assertFalse(CalendarMeal.objects.exists())
+
+    def test_form_prefills_stepper_and_keeps_recipe_input_empty(self):
+        self._plan(servings=5)
+        response = self.client.get(
+            reverse("calendarmeal_form", args=[self.iso, MealType.LUNCH])
+        )
+        self.assertContains(response, 'name="servings" value="5"')
+        self.assertContains(response, 'placeholder="Keep Stew, or search…"')
+        # The recipe <input> itself has no value (the datalist option does).
+        recipe_input = re.search(
+            r'<input[^>]*name="recipe"[^>]*>', response.content.decode()
+        )
+        self.assertNotIn("value=", recipe_input.group(0))
+
+    def test_badge_only_for_meals_with_own_servings(self):
+        self._plan()
+        self._plan(servings=6, meal_type=MealType.DINNER)
+        response = self.client.get(reverse("planner_calendar"))
+        self.assertContains(response, 'title="6 servings"', count=1)
+
+    def test_applied_template_meals_use_household_default(self):
+        template = TemplateWeek.objects.create(name="Usual")
+        TemplateMeal.objects.create(
+            template=template, weekday=1, meal_type=MealType.LUNCH, recipe=self.stew
+        )
+        self.client.post(
+            reverse("week_apply_template", args=[self.iso]), {"template": template.pk}
+        )
+        self.assertIsNone(CalendarMeal.objects.get().servings)
+
+    def test_template_forms_have_no_servings(self):
+        template = TemplateWeek.objects.create(name="Usual")
+        response = self.client.get(
+            reverse("templatemeal_form", args=[template.pk, 1, MealType.LUNCH])
+        )
+        self.assertNotContains(response, 'name="servings"')
+
+    def test_planner_shows_household_control_collapsed(self):
+        response = self.client.get(reverse("planner_calendar"))
+        # Closed by default: a "👥 2" toggle; the stepper sits in its panel.
+        self.assertContains(response, '<details class="menu household-servings">')
+        self.assertContains(response, 'aria-label="Cooking for 2. Change"')
+        self.assertContains(response, 'name="default_servings" value="2"')

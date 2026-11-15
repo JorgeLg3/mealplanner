@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TemplateWeek, TemplateMeal, CalendarMeal
+from .models import CalendarMeal, HouseholdSettings, TemplateMeal, TemplateWeek
 
 
-admin.site.register((TemplateWeek, TemplateMeal, CalendarMeal))
+admin.site.register((TemplateWeek, TemplateMeal, CalendarMeal, HouseholdSettings))

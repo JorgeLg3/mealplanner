@@ -120,7 +120,7 @@
               <input type="date" name="due_date" value="{{ due_date }}">
             </label>
           </div>
-          <p class="field__help">Untick anything you already have.</p>
+          <p class="field__help">Amounts are scaled to each meal's servings. Untick anything you already have.</p>
 
           {% regroup items by category as category_groups %}
           {% for group in category_groups %}

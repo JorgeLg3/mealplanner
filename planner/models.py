@@ -1,6 +1,10 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from recipes.models import Recipe
+
+
+MAX_SERVINGS = 50
 
 
 class MealType(models.TextChoices):
@@ -30,6 +34,38 @@ class TemplateWeek(models.Model):
         return self.name
 
 
+class HouseholdSettings(models.Model):
+    """Single row of household-wide planner settings (the app is shared by
+    one household). Use HouseholdSettings.get()."""
+
+    default_servings = models.PositiveSmallIntegerField(
+        default=2,
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_SERVINGS)],
+        help_text="How many people a planned meal is for, unless set per meal.",
+    )
+
+    class Meta:
+        verbose_name_plural = "household settings"
+
+    def __str__(self):
+        return f"Household settings (cooking for {self.default_servings})"
+
+    @classmethod
+    def get(cls):
+        settings, _ = cls.objects.get_or_create(pk=1)
+        return settings
+
+
+def servings_field():
+    # Empty = "use the household default", so changing the default updates
+    # every meal that wasn't set on purpose.
+    return models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_SERVINGS)],
+    )
+
+
 class TemplateMeal(models.Model):
     meal_type = models.CharField(max_length=20, choices=MealType.choices)
     weekday = models.IntegerField(choices=Weekday.choices)
@@ -57,6 +93,7 @@ class CalendarMeal(models.Model):
     meal_type = models.CharField(max_length=20, choices=MealType.choices)
     date = models.DateField()
     recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT)
+    servings = servings_field()
 
     class Meta:
         constraints = [
