@@ -592,3 +592,34 @@ class TemplateEditDeleteTests(TestCase):
                 self.assertEqual(self.client.get(url).status_code, 302)
                 self.assertEqual(self.client.post(url).status_code, 302)
         self.assertTrue(TemplateWeek.objects.filter(name="Usual").exists())
+
+
+class RecipePickerTests(TestCase):
+    """The slot forms feed static/js/combobox.js via their <datalist>."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="tester", password="x"
+        )
+        self.client.force_login(self.user)
+        Recipe.objects.create(name="Stew", description="d", servings=2)
+
+    def test_calendar_and_template_forms_are_autosubmitting_comboboxes(self):
+        template = TemplateWeek.objects.create(name="Usual")
+        for url in [
+            reverse("calendarmeal_form", args=["2030-01-07", MealType.LUNCH]),
+            reverse("templatemeal_form", args=[template.pk, 1, MealType.LUNCH]),
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, "data-autosubmit")
+                self.assertContains(response, 'data-empty-text="No matching recipe"')
+                self.assertContains(
+                    response, '<option value="Stew"></option>', html=True
+                )
+
+    def test_layout_loads_combobox_script(self):
+        response = self.client.get(reverse("planner_calendar"))
+        self.assertRegex(
+            response.content.decode(), r"/static/js/combobox\.[0-9a-f]+\.js"
+        )

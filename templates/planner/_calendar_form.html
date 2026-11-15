@@ -16,6 +16,8 @@
            list="recipes-{{ slot_id }}"
            placeholder="Search recipe…"
            autocomplete="off"
+           data-autosubmit
+           data-empty-text="No matching recipe"
            autofocus
            required>
     <datalist id="recipes-{{ slot_id }}">

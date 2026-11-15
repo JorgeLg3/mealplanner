@@ -397,3 +397,12 @@ class RecipeDeleteInUseTests(TestCase):
         self.assertContains(self.client.get(url), "Delete recipe</button>")
         self.assertRedirects(self.client.post(url), reverse("recipe_list"))
         self.assertFalse(Recipe.objects.filter(pk=free.pk).exists())
+
+
+class IngredientPickerTests(TestCase):
+    def test_ingredient_input_disables_browser_autofill(self):
+        user = get_user_model().objects.create_user(username="cook", password="x")
+        self.client.force_login(user)
+        response = self.client.get(reverse("recipe_create"))
+        self.assertContains(response, 'list="ingredient-options"')
+        self.assertContains(response, 'autocomplete="off"')

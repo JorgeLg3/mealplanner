@@ -12,7 +12,11 @@ class RecipeIngredientForm(forms.ModelForm):
     ingredient_name = forms.CharField(
         max_length=100,
         label="Ingredient",
-        widget=forms.TextInput(attrs={"list": "ingredient-options"}),
+        # autocomplete=off keeps the browser's form history from covering the
+        # styled suggestion list (static/js/combobox.js).
+        widget=forms.TextInput(
+            attrs={"list": "ingredient-options", "autocomplete": "off"}
+        ),
     )
 
     class Meta:

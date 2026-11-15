@@ -87,5 +87,6 @@
       <a href="{{ todos_url }}" {% if todos_url in request.path %}class="is-active" aria-current="page"{% endif %}>{% include "icons/square-check.svg" %}<span>Todos</span></a>
     </nav>
     <script src="{% static 'js/app.js' %}" defer></script>
+    <script src="{% static 'js/combobox.js' %}" defer></script>
   </body>
 </html>
