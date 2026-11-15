@@ -785,20 +785,6 @@ label {
   padding: var(--space-10) var(--gutter) var(--space-12);
 }
 
-.site-footer {
-  width: 100%;
-  max-width: var(--content-width);
-  margin: 0 auto;
-  padding: var(--space-6) var(--gutter);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.site-footer a {
-  color: inherit;
-}
-
 /* Tablet / narrow desktop: keep the header on one line. */
 @media (min-width: 721px) and (max-width: 960px) {
   .site-header__inner {
@@ -846,8 +832,7 @@ label {
   }
 
   .site-nav,
-  .site-auth,
-  .site-footer {
+  .site-auth {
     display: none;
   }
 

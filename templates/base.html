@@ -62,7 +62,6 @@
               <a href="{% url 'login' %}">Log in</a>
               <a href="{% url 'signup' %}">Sign up</a>
             {% endif %}
-            <a href="{% url 'about' %}">About</a>
           </div>
         </details>
       </div>
@@ -71,10 +70,6 @@
     <main class="site-main">
       {% block content %}{% endblock %}
     </main>
-
-    <footer class="site-footer">
-      <a href="{% url 'about' %}">About</a>
-    </footer>
 
     {# Shown by app.js when an HTMX request fails. #}
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
