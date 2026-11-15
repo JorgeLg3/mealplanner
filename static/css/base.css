@@ -1021,54 +1021,119 @@ label {
   text-align: center;
 }
 
-.home-intro {
-  max-width: 36rem;
-  margin-bottom: var(--space-10);
+/* Home dashboard: today's meals + overdue / this week's todos. */
+.home__header {
+  margin-bottom: var(--space-6);
 }
 
-.home-intro p {
-  color: var(--color-text-secondary);
-  font-size: var(--text-md);
-}
-
-.home-index {
+.home__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--space-4);
-  list-style: none;
-  padding: 0;
-  margin: 0;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-6);
+  align-items: start;
 }
 
-.home-index a {
+.home-card {
+  padding: var(--space-5);
+}
+
+.home-card__header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  height: 100%;
-  padding: var(--space-5) var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-text);
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.home-index a:hover {
-  border-color: var(--color-primary-light);
-  box-shadow: var(--shadow-md);
-}
-
-.home-index__title {
+.home-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
   font-size: var(--text-md);
+}
+
+.home-card__link {
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.home-index__desc {
+.home-card__empty {
+  margin: 0;
   color: var(--color-text-secondary);
+}
+
+.home-meals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-meal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.home-meal__thumb {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-input);
+  object-fit: cover;
+  background: var(--color-surface-sunken);
+}
+
+.home-meal__thumb--empty {
+  display: grid;
+  place-items: center;
+  color: var(--color-border-strong);
+}
+
+.home-meal__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.home-meal__recipe {
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.home-meal__recipe:hover {
+  color: var(--color-primary-hover);
+}
+
+.home-meal__none {
+  color: var(--color-text-secondary);
+}
+
+/* Static group headings (not collapsible) on the home card. */
+.home-todos__group .todo-group__title {
+  margin: 0 0 var(--space-1);
   font-size: var(--text-sm);
+  cursor: default;
+}
+
+.home-todos__group:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .home__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .home-card {
+    padding: var(--space-4);
+  }
 }
 
 /* ==========================================================================

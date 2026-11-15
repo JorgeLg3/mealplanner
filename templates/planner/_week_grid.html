@@ -1,6 +1,6 @@
 {# One week's days. Seven columns on desktop, a vertical list on phones. #}
 {# Context: days (list of {date, is_today, lunch, dinner}) #}
-<div class="week-days">
+<div class="week-days week-days--calendar">
   {% for day in days %}
     <section class="day{% if day.is_today %} day--today{% endif %}"
              id="day-{{ day.date|date:'Y-m-d' }}"

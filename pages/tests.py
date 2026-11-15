@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from django.contrib.auth import get_user_model
@@ -114,3 +115,64 @@ class LoginRequiredTests(TestCase):
 
     def test_signup_is_closed(self):
         self.assertEqual(self.client.get("/auth/signup/").status_code, 404)
+
+
+class HomeDashboardTests(LoggedInTestCase):
+    def setUp(self):
+        super().setUp()
+        from recipes.models import Recipe
+
+        self.today = datetime.date.today()
+        self.stew = Recipe.objects.create(name="Stew", description="d", servings=2)
+
+    def test_shows_todays_meals_and_empty_slots(self):
+        from planner.models import CalendarMeal, MealType
+
+        CalendarMeal.objects.create(
+            date=self.today, meal_type=MealType.LUNCH, recipe=self.stew
+        )
+        # Tomorrow's meal must not appear.
+        CalendarMeal.objects.create(
+            date=self.today + datetime.timedelta(days=1),
+            meal_type=MealType.DINNER,
+            recipe=self.stew,
+        )
+        response = self.client.get("/")
+        meals = {m["label"]: m["meal"] for m in response.context["meals"]}
+        self.assertEqual(meals["Lunch"].recipe, self.stew)
+        self.assertIsNone(meals["Dinner"])
+        self.assertContains(response, f'href="{self.stew.get_absolute_url()}"')
+        self.assertContains(response, "Nothing planned")
+
+    def test_shows_only_overdue_and_this_weeks_todos(self):
+        from todo.models import Todo
+
+        sunday = self.today + datetime.timedelta(days=6 - self.today.weekday())
+        Todo.objects.create(name="Late", due_date=self.today - datetime.timedelta(1))
+        Todo.objects.create(name="Soon", due_date=sunday)
+        Todo.objects.create(name="Far", due_date=sunday + datetime.timedelta(1))
+        Todo.objects.create(name="Whenever")
+        Todo.objects.create(name="Finished", due_date=self.today, is_done=True)
+
+        response = self.client.get("/")
+
+        groups = {
+            g["key"]: [t.name for t in g["todos"]]
+            for g in response.context["todo_groups"]
+        }
+        self.assertEqual(groups, {"overdue": ["Late"], "week": ["Soon"]})
+        # Rows are the interactive todo partial (tick in place).
+        self.assertContains(response, 'id="todo-list"', count=0)
+        self.assertContains(response, "todo__details")
+
+    def test_empty_todos_message(self):
+        response = self.client.get("/")
+        self.assertContains(response, "Nothing overdue or due this week.")
+
+    def test_home_creates_missing_recurring_todos(self):
+        from todo.models import RecurringTodo
+
+        RecurringTodo.objects.create(name="Bins", start_date=self.today)
+        response = self.client.get("/")
+        names = [t.name for g in response.context["todo_groups"] for t in g["todos"]]
+        self.assertIn("Bins", names)

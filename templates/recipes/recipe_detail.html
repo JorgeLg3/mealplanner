@@ -41,15 +41,11 @@
       <h2 id="ingredients-title" class="recipe-detail__heading">{% include "icons/shopping-cart.svg" %}Ingredients</h2>
       {% with rows=recipe.recipeingredient_set.all %}
         {% if rows %}
-          {# Checkboxes are a cooking aid only: no name, nothing is saved. #}
           <ul class="ingredient-list">
             {% for recipe_ingredient in rows %}
-              <li>
-                <label class="ingredient-list__row">
-                  <input type="checkbox">
-                  <span class="ingredient-list__amount">{% if recipe_ingredient.quantity %}{{ recipe_ingredient.quantity|floatformat }}{% if recipe_ingredient.unit %} {{ recipe_ingredient.unit }}{% endif %}{% endif %}</span>
-                  <span class="ingredient-list__name">{{ recipe_ingredient.ingredient }}{% if recipe_ingredient.prep_note %}<span class="text-secondary"> – {{ recipe_ingredient.prep_note }}</span>{% endif %}</span>
-                </label>
+              <li class="ingredient-list__row">
+                <span class="ingredient-list__amount">{% if recipe_ingredient.quantity %}{{ recipe_ingredient.quantity|floatformat }}{% if recipe_ingredient.unit %} {{ recipe_ingredient.unit }}{% endif %}{% endif %}</span>
+                <span class="ingredient-list__name">{{ recipe_ingredient.ingredient }}{% if recipe_ingredient.prep_note %}<span class="text-secondary"> – {{ recipe_ingredient.prep_note }}</span>{% endif %}</span>
               </li>
             {% endfor %}
           </ul>

@@ -1,35 +1,73 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/todo.css' %}">
+{% endblock %}
 
 {% block content %}
-  <section class="home-intro">
-    <h1>{% if user.is_authenticated %}Hi {{ user.username }}{% else %}Hi there{% endif %}</h1>
-    <p>Sort out the week's meals, keep the recipes handy, and get the shopping list done.</p>
-  </section>
+  {# hx-headers on the wrapper so the todo rows' tick/edit actions get the CSRF token. #}
+  <div class="home" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <header class="page-header home__header">
+      <div>
+        <h1>Hi {{ user.username }}</h1>
+        <p class="page-header__subtitle">{{ today|date:"l, j F" }}</p>
+      </div>
+    </header>
 
-  <ul class="home-index">
-    <li>
-      <a href="{% url 'planner_calendar' %}">
-        <span class="home-index__title">Planner</span>
-        <span class="home-index__desc">This week and next</span>
-      </a>
-    </li>
-    <li>
-      <a href="{% url 'templateweek_list' %}">
-        <span class="home-index__title">Templates</span>
-        <span class="home-index__desc">Reusable weeks</span>
-      </a>
-    </li>
-    <li>
-      <a href="{% url 'recipe_list' %}">
-        <span class="home-index__title">Recipes</span>
-        <span class="home-index__desc">Everything we cook</span>
-      </a>
-    </li>
-    <li>
-      <a href="{% url 'todo_list' %}">
-        <span class="home-index__title">Todos</span>
-        <span class="home-index__desc">House tasks and shopping lists</span>
-      </a>
-    </li>
-  </ul>
+    <div class="home__grid">
+      {# ---------- Today's meals ---------- #}
+      <section class="card home-card" aria-labelledby="home-meals-title">
+        <div class="home-card__header">
+          <h2 id="home-meals-title" class="home-card__title">{% include "icons/calendar.svg" %}Today's meals</h2>
+          <a class="home-card__link" href="{% url 'planner_calendar' %}#day-{{ today|date:'Y-m-d' }}">Planner</a>
+        </div>
+        <ul class="home-meals">
+          {% for entry in meals %}
+            <li class="home-meal{% if not entry.meal %} home-meal--empty{% endif %}">
+              {% if entry.meal and entry.meal.recipe.image %}
+                <img class="home-meal__thumb" src="{{ entry.meal.recipe.image.url }}" alt="" width="56" height="56">
+              {% else %}
+                <span class="home-meal__thumb home-meal__thumb--empty" aria-hidden="true">{% include "icons/chef-hat.svg" %}</span>
+              {% endif %}
+              <div class="home-meal__body">
+                <span class="label">{{ entry.label }}</span>
+                {% if entry.meal %}
+                  <a class="home-meal__recipe" href="{{ entry.meal.recipe.get_absolute_url }}">{{ entry.meal.recipe.name }}</a>
+                {% else %}
+                  <span class="home-meal__none">Nothing planned · <a href="{% url 'planner_calendar' %}#day-{{ today|date:'Y-m-d' }}">Plan it</a></span>
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      {# ---------- Overdue + this week's todos ---------- #}
+      <section class="card home-card" aria-labelledby="home-todos-title">
+        <div class="home-card__header">
+          <h2 id="home-todos-title" class="home-card__title">{% include "icons/square-check.svg" %}Todos</h2>
+          <a class="home-card__link" href="{% url 'todo_list' %}">All todos</a>
+        </div>
+        {% for group in todo_groups %}
+          <div class="todo-group todo-group--{{ group.key }} home-todos__group">
+            <h3 class="todo-group__title">
+              <span class="todo-group__label">{{ group.label }}</span>
+              <span class="todo-group__count">{{ group.todos|length }}</span>
+            </h3>
+            <ul class="todo-list">
+              {% for todo in group.todos %}
+                {% include "todo/_todo.html" with open=False oob=False %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% empty %}
+          <p class="home-card__empty">Nothing overdue or due this week.</p>
+        {% endfor %}
+      </section>
+    </div>
+
+    {# Edit dialogs from the todo rows load here. #}
+    <div id="todo-dialog"></div>
+  </div>
 {% endblock %}

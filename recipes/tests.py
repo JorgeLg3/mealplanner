@@ -409,3 +409,14 @@ class IngredientPickerTests(TestCase):
         response = self.client.get(reverse("recipe_create"))
         self.assertContains(response, 'list="ingredient-options"')
         self.assertContains(response, 'autocomplete="off"')
+
+
+class RecipeDetailIngredientListTests(LoggedInTestCase):
+    def test_ingredients_are_a_bulleted_list_not_checkboxes(self):
+        recipe = Recipe.objects.create(name="Sopa", description="d", servings=2)
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=Ingredient.objects.create(name="cebolla")
+        )
+        response = self.client.get(recipe.get_absolute_url())
+        self.assertContains(response, '<li class="ingredient-list__row">')
+        self.assertNotContains(response, 'type="checkbox"')

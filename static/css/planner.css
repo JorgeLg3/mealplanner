@@ -190,6 +190,17 @@
   padding-right: 4rem;
 }
 
+/* Phone-only parts of a calendar slot (see the phones section). On desktop
+   the body wrapper is transparent, so label/name lay out as before. */
+.slot__thumb,
+.slot__nothing {
+  display: none;
+}
+
+.slot__body {
+  display: contents;
+}
+
 /* Servings badge in the label row; only on meals with their own number. */
 .slot__label {
   gap: var(--space-2);
@@ -793,6 +804,91 @@ button.slot__add:hover {
 
   .slot__add-long {
     display: inline;
+  }
+
+  /* Calendar slots as list rows, like "Today's meals" on home:
+     photo · LUNCH + name · Replace / Remove (or + Add), one fixed height,
+     lunch and dinner separated by a hairline instead of nested boxes. */
+  .week-days--calendar {
+    --slot-height: 4.5rem;
+  }
+
+  .week-days--calendar .day {
+    gap: 0;
+  }
+
+  .week-days--calendar .day__header {
+    margin-bottom: var(--space-1);
+  }
+
+  .week-days--calendar .slot:not(.slot--editing) {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+  }
+
+  .week-days--calendar .slot + .slot {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .week-days--calendar .slot__thumb {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-input);
+    object-fit: cover;
+    background: var(--color-surface-sunken);
+  }
+
+  .week-days--calendar .slot__thumb--empty {
+    color: var(--color-border-strong);
+  }
+
+  .week-days--calendar .slot__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .week-days--calendar .slot__label {
+    min-height: 0;
+    padding-right: 0;
+  }
+
+  .week-days--calendar .slot__recipe {
+    font-size: var(--text-md);
+    -webkit-line-clamp: 2;
+  }
+
+  .week-days--calendar .slot__nothing {
+    display: block;
+    color: var(--color-text-secondary);
+  }
+
+  .week-days--calendar .slot__actions {
+    position: static;
+    flex-shrink: 0;
+    opacity: 1;
+  }
+
+  .week-days--calendar .slot__add,
+  .week-days--calendar button.slot__add {
+    flex: none;
+    align-self: center;
+    min-height: 2.5rem;
+    padding: 0 var(--space-3);
+  }
+
+  .week-days--calendar .slot--editing {
+    margin: var(--space-2) 0;
   }
 
   .slot__form input[type="text"] {

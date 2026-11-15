@@ -53,6 +53,17 @@ def _group_by_due_date(todos):
     return [{"key": key, **group} for key, group in groups.items() if group["todos"]]
 
 
+def grouped_open_todos(only=None):
+    """Open todos grouped by due date (see _group_by_due_date), after topping
+    up recurrences that lost their open todo. ``only`` limits the result to
+    some group keys, e.g. ("overdue", "week") for the home page."""
+    RecurringTodo.ensure_all()
+    groups = _group_by_due_date(_open_todos())
+    if only is not None:
+        groups = [g for g in groups if g["key"] in only]
+    return groups
+
+
 def _list_context(oob=False):
     return {"groups": _group_by_due_date(_open_todos()), "oob": oob}
 
@@ -61,8 +72,9 @@ def todo_list(request):
     """Open todos grouped by due date; done ones drop off on the next load.
     Also tops up recurrences that lost their open todo (e.g. it was deleted
     to skip an occurrence)."""
-    RecurringTodo.ensure_all()
-    return render(request, "todo/todo_list.html", _list_context())
+    return render(
+        request, "todo/todo_list.html", {"groups": grouped_open_todos(), "oob": False}
+    )
 
 
 def todo_done(request):
