@@ -176,3 +176,23 @@ class HomeDashboardTests(LoggedInTestCase):
         response = self.client.get("/")
         names = [t.name for g in response.context["todo_groups"] for t in g["todos"]]
         self.assertIn("Bins", names)
+
+
+class EmbeddingTests(LoggedInTestCase):
+    def test_framing_is_same_origin_by_default_via_csp(self):
+        response = self.client.get("/")
+        self.assertEqual(response["Content-Security-Policy"], "frame-ancestors 'self'")
+        # Replaced by CSP: X-Frame-Options can't allow a specific other site.
+        self.assertNotIn("X-Frame-Options", response)
+
+    def test_configured_origins_may_embed(self):
+        from django.test import override_settings
+        from django.utils.csp import CSP
+
+        policy = {"frame-ancestors": [CSP.SELF, "https://test.example.com"]}
+        with override_settings(SECURE_CSP=policy):
+            response = self.client.get("/")
+        self.assertEqual(
+            response["Content-Security-Policy"],
+            "frame-ancestors 'self' https://test.example.com",
+        )

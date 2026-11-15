@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+
+from django.utils.csp import CSP
 from environs import Env
 
 
@@ -63,7 +65,9 @@ MIDDLEWARE = [
     # (Django's own login/logout/password-reset views already do).
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Framing is controlled by CSP frame-ancestors (see SECURE_CSP below)
+    # instead of X-Frame-Options, which can't allow one specific other site.
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
 ]
 
 ROOT_URLCONF = "django_project.urls"
@@ -181,3 +185,21 @@ CSRF_TRUSTED_ORIGINS = env.list(
 # overwrite our session/CSRF cookies and log us out.
 SESSION_COOKIE_NAME = "mealplanner_sessionid"
 CSRF_COOKIE_NAME = "mealplanner_csrftoken"
+
+# Who may embed the app in a frame:
+# FRAME_ANCESTORS=https://ha.example.com,http://192.168.1.25:80
+# Empty (default) means same-origin only, like X-Frame-Options SAMEORIGIN.
+# Only frame-ancestors is set, so scripts/styles/fonts aren't restricted.
+FRAME_ANCESTORS = env.list("FRAME_ANCESTORS", default=[])
+SECURE_CSP = {"frame-ancestors": [CSP.SELF, *FRAME_ANCESTORS]}
+# check --deploy warns that X-Frame-Options is missing; frame-ancestors above
+# replaces it (browsers that support CSP ignore X-Frame-Options anyway).
+SILENCED_SYSTEM_CHECKS = ["security.W002"]
+
+# Embedding from a *different site* needs cookies sent in cross-site
+# frames: COOKIE_SAMESITE=None. Browsers only accept that on Secure cookies,
+# so login then only works over HTTPS (not http://<ip>:8002).
+COOKIE_SAMESITE = env.str("COOKIE_SAMESITE", default="Lax")
+SESSION_COOKIE_SAMESITE = CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE
+if COOKIE_SAMESITE == "None":
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
