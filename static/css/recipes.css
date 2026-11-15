@@ -343,25 +343,61 @@
 }
 
 /* ---------- Ingredients page ---------- */
-.ingredient-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
+/* Typographic index: category headings + dotted lists, no cards, flowing
+   into as many ~15rem columns as fit. */
+.ingredient-index {
+  columns: 15rem;
+  column-gap: var(--space-10);
 }
 
-.ingredient-group {
-  padding: var(--space-5);
+.ingredient-index__group {
+  break-inside: avoid;
+  padding-bottom: var(--space-8);
 }
 
-.ingredient-group__items {
-  list-style: none;
+.ingredient-index__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-primary-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ingredient-index__count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.ingredient-index__items {
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
-.ingredient-group__items li {
-  padding: var(--space-1) 0;
+.ingredient-index__items li {
+  position: relative;
+  padding: var(--space-1) 0 var(--space-1) var(--space-5);
+  line-height: 1.4;
+}
+
+/* Same small blue dot as the recipe page's ingredient list. */
+.ingredient-index__items li::before {
+  content: "";
+  position: absolute;
+  left: var(--space-1);
+  top: calc(var(--space-1) + 0.55em);
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--color-primary);
 }
 
 /* ---------- Narrow screens ---------- */

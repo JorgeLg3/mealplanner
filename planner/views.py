@@ -16,7 +16,7 @@ from django.views.generic import (
     DetailView,
     TemplateView,
 )
-from recipes.models import Recipe, RecipeIngredient, Unit
+from recipes.models import OTHER_CATEGORY, Recipe, RecipeIngredient, Unit
 from todo.models import Subtask, Todo
 from .models import (
     MAX_SERVINGS,
@@ -563,7 +563,7 @@ def _round_quantity(quantity, unit):
 
 def _shopping_items(dates):
     """One entry per distinct ingredient scheduled on ``dates``, sorted by
-    ingredient category (uncategorized last) then name. Each meal's
+    ingredient category ("otros" last) then name. Each meal's
     ingredients are scaled by (meal servings / recipe servings), where meal
     servings falls back to the household default. Quantities are then summed
     per unit, without converting between units, e.g. "1 ud + 300 g", and
@@ -606,11 +606,17 @@ def _shopping_items(dates):
         items.append(
             {
                 "id": ingredient.pk,
-                "category": ingredient.category.name if ingredient.category else None,
+                "category": ingredient.category.name,
                 "label": f"{name}: {amounts}" if amounts else name,
             }
         )
-    items.sort(key=lambda i: (i["category"] is None, i["category"] or "", i["label"]))
+    items.sort(
+        key=lambda i: (
+            i["category"].lower() == OTHER_CATEGORY,
+            i["category"],
+            i["label"],
+        )
+    )
     return items
 
 

@@ -1,3 +1,4 @@
+import re
 import datetime
 import io
 import os
@@ -23,9 +24,9 @@ from .models import (
 
 
 class RecipeListTests(LoggedInTestCase):
-    def test_recipes_grouped_by_category_with_uncategorized_last(self):
-        dinner = RecipeCategory.objects.create(name="Dinner")
-        breakfast = RecipeCategory.objects.create(name="Breakfast")
+    def test_recipes_grouped_by_category_with_otros_last(self):
+        dinner = RecipeCategory.objects.get_or_create(name="Dinner")[0]
+        breakfast = RecipeCategory.objects.get_or_create(name="Breakfast")[0]
         Recipe.objects.create(name="Stew", category=dinner, description="d", servings=2)
         Recipe.objects.create(
             name="Curry", category=dinner, description="d", servings=2
@@ -41,7 +42,9 @@ class RecipeListTests(LoggedInTestCase):
             [r.name for r in response.context["recipe_list"]],
             ["Pancakes", "Curry", "Stew", "Toast"],
         )
-        for heading in ["Breakfast", "Dinner", "Uncategorized"]:
+        # Toast had no category: it falls back to "otros", listed last.
+        self.assertEqual(Recipe.objects.get(name="Toast").category.name, "otros")
+        for heading in ["Breakfast", "Dinner", "Otros"]:
             self.assertContains(
                 response,
                 f'<h2 class="recipe-group__title">{heading}</h2>',
@@ -51,27 +54,23 @@ class RecipeListTests(LoggedInTestCase):
 
 class RecipeDetailTests(LoggedInTestCase):
     def test_shows_category(self):
-        category = RecipeCategory.objects.create(name="Dessert")
+        category = RecipeCategory.objects.get_or_create(name="Dessert")[0]
         recipe = Recipe.objects.create(
             name="Flan", category=category, description="d", servings=4
         )
         response = self.client.get(recipe.get_absolute_url())
         self.assertContains(response, '<span class="badge">Dessert</span>', html=True)
 
-    def test_shows_uncategorized_when_missing(self):
+    def test_recipe_without_category_shows_otros_capitalized(self):
         recipe = Recipe.objects.create(name="Toast", description="d", servings=1)
         response = self.client.get(recipe.get_absolute_url())
-        self.assertContains(
-            response,
-            '<span class="badge badge--neutral">Uncategorized</span>',
-            html=True,
-        )
+        self.assertContains(response, '<span class="badge">Otros</span>', html=True)
 
 
 class IngredientListTests(LoggedInTestCase):
-    def test_ingredients_grouped_by_category_with_uncategorized_last(self):
-        veg = IngredientCategory.objects.create(name="Vegetables")
-        dairy = IngredientCategory.objects.create(name="Dairy")
+    def test_ingredients_grouped_by_category_with_otros_last(self):
+        veg = IngredientCategory.objects.get_or_create(name="Vegetables")[0]
+        dairy = IngredientCategory.objects.get_or_create(name="Dairy")[0]
         Ingredient.objects.create(name="tomato", category=veg)
         Ingredient.objects.create(name="carrot", category=veg)
         Ingredient.objects.create(name="milk", category=dairy)
@@ -83,12 +82,11 @@ class IngredientListTests(LoggedInTestCase):
             [i.name for i in response.context["ingredient_list"]],
             ["milk", "carrot", "tomato", "salt"],
         )
-        for heading in ["Dairy", "Vegetables", "Uncategorized"]:
-            self.assertContains(
-                response,
-                f'<h2 class="recipe-group__title">{heading}</h2>',
-                html=True,
-            )
+        titles = re.findall(
+            r'class="ingredient-index__title"[^>]*>\s*([^<]+?)\s*<',
+            response.content.decode(),
+        )
+        self.assertEqual(titles, ["Dairy", "Vegetables", "Otros"])
 
     def test_recipe_list_links_to_ingredients(self):
         response = self.client.get(reverse("recipe_list"))
@@ -98,8 +96,8 @@ class IngredientListTests(LoggedInTestCase):
 class RecipeCatalogTests(LoggedInTestCase):
     def setUp(self):
         super().setUp()
-        self.meat = RecipeCategory.objects.create(name="carnes")
-        self.soup = RecipeCategory.objects.create(name="sopas")
+        self.meat = RecipeCategory.objects.get_or_create(name="carnes")[0]
+        self.soup = RecipeCategory.objects.get_or_create(name="sopas")[0]
         Recipe.objects.create(
             name="Pollo", category=self.meat, description="", servings=2
         )
@@ -123,8 +121,9 @@ class RecipeCatalogTests(LoggedInTestCase):
     def test_filter_by_category(self):
         self.assertEqual(self._names(category=self.soup.pk), ["Crema de pollo"])
 
-    def test_filter_uncategorized(self):
-        self.assertEqual(self._names(category="none"), ["Tostadas"])
+    def test_filter_otros(self):
+        otros = RecipeCategory.other()
+        self.assertEqual(self._names(category=otros.pk), ["Tostadas"])
 
     def test_search_and_category_combine(self):
         self.assertEqual(self._names(q="asado", category=self.meat.pk), ["Pollo asado"])
@@ -134,9 +133,9 @@ class RecipeCatalogTests(LoggedInTestCase):
 
     def test_sidebar_counts_and_active_item(self):
         response = self.client.get(reverse("recipe_list"), {"category": self.meat.pk})
-        counts = {c.name: c.recipe_count for c in response.context["categories"]}
-        self.assertEqual(counts, {"carnes": 2, "sopas": 1})
-        self.assertEqual(response.context["uncategorized_count"], 1)
+        # Empty seeded categories are left out of the sidebar; "otros" is last.
+        counts = [(c.name, c.recipe_count) for c in response.context["categories"]]
+        self.assertEqual(counts, [("carnes", 2), ("sopas", 1), ("otros", 1)])
         self.assertEqual(response.context["total_count"], 4)
         self.assertContains(response, 'class="category-nav__item is-active"')
 
@@ -155,9 +154,9 @@ class RecipeCatalogTests(LoggedInTestCase):
         self.assertContains(response, "Clear search")
 
     def test_empty_category_state(self):
-        empty = RecipeCategory.objects.create(name="postres")
+        empty = RecipeCategory.objects.get_or_create(name="postres")[0]
         response = self.client.get(reverse("recipe_list"), {"category": empty.pk})
-        self.assertContains(response, "Nothing in postres yet")
+        self.assertContains(response, "Nothing in Postres yet")
 
     def test_no_recipes_state(self):
         Recipe.objects.all().delete()
@@ -169,7 +168,7 @@ class RecipeFormTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="cook", password="x")
         self.client.force_login(self.user)
-        self.category = RecipeCategory.objects.create(name="sopas")
+        self.category = RecipeCategory.objects.get_or_create(name="sopas")[0]
 
     def _post_data(self, **extra):
         data = {
@@ -251,7 +250,7 @@ class RecipeImageTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="cook", password="x")
         self.client.force_login(self.user)
-        self.category = RecipeCategory.objects.create(name="carnes")
+        self.category = RecipeCategory.objects.get_or_create(name="carnes")[0]
 
     def _create(self, **extra):
         data = {
@@ -420,3 +419,81 @@ class RecipeDetailIngredientListTests(LoggedInTestCase):
         response = self.client.get(recipe.get_absolute_url())
         self.assertContains(response, '<li class="ingredient-list__row">')
         self.assertNotContains(response, 'type="checkbox"')
+
+
+class DefaultCategoryTests(LoggedInTestCase):
+    def test_default_lists_are_seeded(self):
+        recipe_names = set(RecipeCategory.objects.values_list("name", flat=True))
+        ingredient_names = set(
+            IngredientCategory.objects.values_list("name", flat=True)
+        )
+        self.assertTrue({"carnes", "oriental", "pizzas", "otros"} <= recipe_names)
+        self.assertTrue(
+            {"frutas y verduras", "embutidos", "limpieza y hogar", "otros"}
+            <= ingredient_names
+        )
+
+    def test_otros_sorts_last(self):
+        self.assertEqual(list(RecipeCategory.objects.all())[-1].name, "otros")
+        self.assertEqual(list(IngredientCategory.objects.all())[-1].name, "otros")
+
+    def test_new_ingredient_defaults_to_otros(self):
+        self.assertEqual(
+            Ingredient.objects.create(name="azafrán").category.name, "otros"
+        )
+
+    def test_deleting_a_category_moves_items_to_otros(self):
+        cat = RecipeCategory.objects.create(name="temporal")
+        recipe = Recipe.objects.create(
+            name="X", category=cat, description="d", servings=1
+        )
+        ing_cat = IngredientCategory.objects.create(name="temporal")
+        ingredient = Ingredient.objects.create(name="y", category=ing_cat)
+
+        cat.delete()
+        ing_cat.delete()
+
+        recipe.refresh_from_db()
+        ingredient.refresh_from_db()
+        self.assertEqual(recipe.category.name, "otros")
+        self.assertEqual(ingredient.category.name, "otros")
+
+    def test_otros_cannot_be_deleted(self):
+        from django.db.models import ProtectedError
+
+        with self.assertRaises(ProtectedError):
+            RecipeCategory.other().delete()
+        with self.assertRaises(ProtectedError):
+            IngredientCategory.other().delete()
+
+    def test_admin_protects_otros(self):
+        from django.contrib import admin
+
+        model_admin = admin.site._registry[RecipeCategory]
+        self.assertFalse(
+            model_admin.has_delete_permission(None, RecipeCategory.other())
+        )
+
+    def test_list_headings_and_sidebar_are_capitalized(self):
+        cat = RecipeCategory.objects.get(name="guisos y legumbres")
+        Recipe.objects.create(
+            name="Lentejas", category=cat, description="d", servings=2
+        )
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(
+            response,
+            '<h2 class="recipe-group__title">Guisos y legumbres</h2>',
+            html=True,
+        )
+        self.assertContains(response, "<span>Guisos y legumbres</span>")
+        # Cards no longer repeat the category as a tag.
+        self.assertNotContains(response, '<span class="badge">')
+
+    def test_ingredient_page_headings_are_capitalized(self):
+        cat = IngredientCategory.objects.get(name="frutos secos")
+        Ingredient.objects.create(name="nueces", category=cat)
+        response = self.client.get(reverse("ingredient_list"))
+        self.assertContains(response, "Frutos secos")
+        # Ingredient names are capitalized in a plain dotted list, no cards.
+        self.assertContains(response, "<li>Nueces</li>", html=True)
+        self.assertNotContains(response, 'class="card')

@@ -39,11 +39,8 @@
       <select name="category">
         <option value="">All categories</option>
         {% for c in categories %}
-          <option value="{{ c.pk }}"{% if category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>
+          <option value="{{ c.pk }}"{% if category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name|capfirst }}</option>
         {% endfor %}
-        {% if uncategorized_count %}
-          <option value="none"{% if category == "none" %} selected{% endif %}>Uncategorized</option>
-        {% endif %}
       </select>
     </label>
     <noscript><button type="submit">Search</button></noscript>
@@ -60,16 +57,9 @@
         <a href="?category={{ c.pk }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
            class="category-nav__item{% if category == c.pk|stringformat:'s' %} is-active{% endif %}"
            {% if category == c.pk|stringformat:'s' %}aria-current="page"{% endif %}>
-          <span>{{ c.name }}</span><span class="category-nav__count">{{ c.recipe_count }}</span>
+          <span>{{ c.name|capfirst }}</span><span class="category-nav__count">{{ c.recipe_count }}</span>
         </a>
       {% endfor %}
-      {% if uncategorized_count %}
-        <a href="?category=none{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
-           class="category-nav__item{% if category == 'none' %} is-active{% endif %}"
-           {% if category == 'none' %}aria-current="page"{% endif %}>
-          <span>Uncategorized</span><span class="category-nav__count">{{ uncategorized_count }}</span>
-        </a>
-      {% endif %}
     </nav>
 
     <div class="recipe-results">
@@ -89,15 +79,15 @@
         </div>
       {% elif not recipe_list %}
         <div class="empty-state">
-          <p class="empty-state__title">Nothing in {{ selected_category.name|default:"this category" }} yet</p>
+          <p class="empty-state__title">Nothing in {{ selected_category.name|capfirst|default:"this category" }} yet</p>
           <p>Pick this category when you create or edit a recipe.</p>
         </div>
       {% else %}
         {% regroup recipe_list by category as category_groups %}
         {% for group in category_groups %}
           <section class="recipe-group">
-            {# The heading is redundant when a single category is selected. #}
-            <h2 class="recipe-group__title{% if category %} visually-hidden{% endif %}">{{ group.grouper|default:"Uncategorized" }}</h2>
+            {# Each section is labelled by its category; cards don't repeat it. #}
+            <h2 class="recipe-group__title">{{ group.grouper.name|capfirst }}</h2>
             <ul class="recipe-cards">
               {% for recipe in group.list %}
                 <li class="recipe-card">
@@ -111,11 +101,6 @@
                     {# The title link stretches over the whole card. #}
                     <h3 class="recipe-card__title"><a class="recipe-card__link" href="{{ recipe.get_absolute_url }}">{{ recipe.name }}</a></h3>
                     <div class="recipe-card__meta">
-                      {% if recipe.category %}
-                        <span class="badge">{{ recipe.category.name }}</span>
-                      {% else %}
-                        <span class="badge badge--neutral">Uncategorized</span>
-                      {% endif %}
                       <span>{{ recipe.servings }} serving{{ recipe.servings|pluralize }}</span>
                       <span aria-hidden="true">·</span>
                       <span>{{ recipe.ingredient_count }} ingredient{{ recipe.ingredient_count|pluralize }}</span>

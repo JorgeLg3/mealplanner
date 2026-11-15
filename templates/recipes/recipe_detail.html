@@ -26,11 +26,7 @@
     <div class="recipe-hero__text">
       <h1>{{ recipe.name }}</h1>
       <div class="recipe-hero__meta">
-        {% if recipe.category %}
-          <span class="badge">{{ recipe.category.name }}</span>
-        {% else %}
-          <span class="badge badge--neutral">Uncategorized</span>
-        {% endif %}
+        <span class="badge">{{ recipe.category.name|capfirst }}</span>
         <span class="recipe-hero__servings">{% include "icons/users.svg" %}Servings: {{ recipe.servings }}</span>
       </div>
     </div>

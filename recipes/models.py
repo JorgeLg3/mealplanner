@@ -19,11 +19,62 @@ def validate_image_size(fieldfile):
         raise ValidationError(f"Max file size is {IMAGE_MAX_UPLOAD_MB} MB.")
 
 
-class RecipeCategory(models.Model):
+# Fallback category for both recipes and ingredients: new ingredients without
+# a category, and anything whose category gets deleted, land here. It can't
+# be deleted itself and always sorts last.
+OTHER_CATEGORY = "otros"
+
+
+def other_last(field):
+    """Sort key putting the "otros" category after the rest, e.g.
+    order_by(other_last("category__name"), "category__name")."""
+    return models.Case(
+        models.When(**{f"{field}__iexact": OTHER_CATEGORY}, then=1),
+        default=0,
+        output_field=models.IntegerField(),
+    )
+
+
+class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        abstract = True
+        # Alphabetical with "otros" last, everywhere (dropdowns, admin, lists).
+        ordering = [other_last("name"), "name"]
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_other(self):
+        return self.name.lower() == OTHER_CATEGORY
+
+    @classmethod
+    def other(cls):
+        category = cls.objects.filter(name__iexact=OTHER_CATEGORY).first()
+        return category or cls.objects.create(name=OTHER_CATEGORY)
+
+    def delete(self, *args, **kwargs):
+        if self.is_other:
+            raise models.ProtectedError(
+                f"“{OTHER_CATEGORY}” is the fallback category and can't be deleted.",
+                {self},
+            )
+        return super().delete(*args, **kwargs)
+
+
+def default_recipe_category():
+    return RecipeCategory.other().pk
+
+
+def default_ingredient_category():
+    return IngredientCategory.other().pk
+
+
+class RecipeCategory(Category):
+    class Meta(Category.Meta):
+        verbose_name_plural = "recipe categories"
 
 
 class Recipe(models.Model):
@@ -35,8 +86,8 @@ class Recipe(models.Model):
     )
     category = models.ForeignKey(
         RecipeCategory,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.SET(default_recipe_category),
+        default=default_recipe_category,
     )
     description = models.TextField()
     servings = models.PositiveIntegerField()
@@ -91,19 +142,17 @@ class Recipe(models.Model):
         return reverse("recipe_detail", kwargs={"pk": self.pk})
 
 
-class IngredientCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return self.name
+class IngredientCategory(Category):
+    class Meta(Category.Meta):
+        verbose_name_plural = "ingredient categories"
 
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=100)
     category = models.ForeignKey(
         IngredientCategory,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.SET(default_ingredient_category),
+        default=default_ingredient_category,
     )
 
     class Meta:

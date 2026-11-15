@@ -125,7 +125,7 @@
           {% regroup items by category as category_groups %}
           {% for group in category_groups %}
             <fieldset class="shopping-dialog__group">
-              <legend>{{ group.grouper|default:"Uncategorized" }}</legend>
+              <legend>{{ group.grouper|capfirst }}</legend>
               {% for item in group.list %}
                 <label class="shopping-dialog__item">
                   <input type="checkbox" name="ingredient" value="{{ item.id }}"

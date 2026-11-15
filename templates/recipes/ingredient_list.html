@@ -14,13 +14,17 @@
   </header>
 
   {% regroup ingredient_list by category as category_groups %}
-  <div class="ingredient-groups">
+  {# Plain sections (no cards) flowing into columns; a category never splits. #}
+  <div class="ingredient-index">
     {% for group in category_groups %}
-      <section class="card ingredient-group">
-        <h2 class="recipe-group__title">{{ group.grouper|default:"Uncategorized" }}</h2>
-        <ul class="ingredient-group__items">
+      <section class="ingredient-index__group" aria-labelledby="ing-cat-{{ group.grouper.pk }}">
+        <h2 class="ingredient-index__title" id="ing-cat-{{ group.grouper.pk }}">
+          {{ group.grouper.name|capfirst }}
+          <span class="ingredient-index__count">{{ group.list|length }}</span>
+        </h2>
+        <ul class="ingredient-index__items">
           {% for ingredient in group.list %}
-            <li>{{ ingredient.name }}</li>
+            <li>{{ ingredient.name|capfirst }}</li>
           {% endfor %}
         </ul>
       </section>

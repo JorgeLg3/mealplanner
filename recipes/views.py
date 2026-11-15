@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, F, ProtectedError
+from django.db.models import Count, ProtectedError
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -11,14 +11,14 @@ from django.views.generic import (
 )
 from planner.models import CalendarMeal, TemplateMeal
 
-from .models import Ingredient, Recipe, RecipeCategory
+from .models import Ingredient, Recipe, RecipeCategory, other_last
 from .forms import RecipeIngredientFormSet
 
 
 class RecipeListView(ListView):
     """Recipe catalog: category sidebar with counts, plus ?q= (name search)
-    and ?category= (a category id, or "none" for uncategorized) filters that
-    combine. Results stay sorted by category so the template can regroup."""
+    and ?category= (a category id) filters that combine. Results stay sorted
+    by category ("otros" last) so the template can regroup."""
 
     model = Recipe
     template_name = "recipes/recipe_list.html"
@@ -31,26 +31,28 @@ class RecipeListView(ListView):
         )
         if self.query:
             recipes = recipes.filter(name__icontains=self.query)
-        if self.category == "none":
-            recipes = recipes.filter(category__isnull=True)
-        elif self.category.isdigit():
+        if self.category.isdigit():
             recipes = recipes.filter(category_id=int(self.category))
         else:
             self.category = ""
-        # Uncategorized last.
-        return recipes.order_by(F("category__name").asc(nulls_last=True), "name")
+        return recipes.order_by(other_last("category__name"), "category__name", "name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        categories = RecipeCategory.objects.annotate(
-            recipe_count=Count("recipe")
-        ).order_by("name")
-        uncategorized = Recipe.objects.filter(category__isnull=True).count()
+        # Seeded categories may be empty: list only those with recipes (plus
+        # the selected one, so its empty state stays reachable).
+        categories = [
+            c
+            # Meta.ordering is ignored on aggregate queries; order explicitly.
+            for c in RecipeCategory.objects.annotate(
+                recipe_count=Count("recipe")
+            ).order_by(other_last("name"), "name")
+            if c.recipe_count or str(c.pk) == self.category
+        ]
         selected = next((c for c in categories if str(c.pk) == self.category), None)
         context.update(
             {
                 "categories": categories,
-                "uncategorized_count": uncategorized,
                 "total_count": Recipe.objects.count(),
                 "query": self.query,
                 "category": self.category,
@@ -63,9 +65,9 @@ class RecipeListView(ListView):
 class IngredientListView(ListView):
     model = Ingredient
     template_name = "recipes/ingredient_list.html"
-    # Sorted by category so the template can {% regroup %} it; uncategorized last.
+    # Sorted by category ("otros" last) so the template can {% regroup %} it.
     queryset = Ingredient.objects.select_related("category").order_by(
-        F("category__name").asc(nulls_last=True), "name"
+        other_last("category__name"), "category__name", "name"
     )
 
 

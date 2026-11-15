@@ -43,14 +43,15 @@ class ExportShoppingListTests(TestCase):
         self.units = Unit.objects.create(
             name="unit", abbreviation="ud", unit_type=Unit.UnitType.COUNT
         )
-        self.veg = IngredientCategory.objects.create(name="Vegetables")
-        self.pantry = IngredientCategory.objects.create(name="Pantry")
+        self.veg = IngredientCategory.objects.get_or_create(name="Vegetables")[0]
+        self.pantry = IngredientCategory.objects.get_or_create(name="Pantry")[0]
 
     def _ingredient(self, name, category=None):
         # Ingredient.save() lowercases names, so look up by the normalized
         # form to avoid tripping the case-insensitive unique constraint.
         ingredient, _ = Ingredient.objects.get_or_create(
-            name=name.lower(), defaults={"category": category}
+            name=name.lower(),
+            defaults={"category": category or IngredientCategory.other()},
         )
         return ingredient
 
@@ -792,3 +793,26 @@ class ServingsTests(TestCase):
         self.assertContains(response, '<details class="menu household-servings">')
         self.assertContains(response, 'aria-label="Cooking for 2. Change"')
         self.assertContains(response, 'name="default_servings" value="2"')
+
+
+class CalendarSlotRowTests(LoggedInTestCase):
+    """Phones show slots as rows: thumbnail · label + name · actions."""
+
+    def test_filled_and_empty_slot_markup(self):
+        recipe = Recipe.objects.create(name="Stew", description="d", servings=2)
+        date = datetime.date(2030, 1, 7)
+        CalendarMeal.objects.create(date=date, meal_type=MealType.LUNCH, recipe=recipe)
+
+        lunch = self.client.get(
+            reverse("calendarmeal_cell", args=[date.isoformat(), MealType.LUNCH])
+        )
+        dinner = self.client.get(
+            reverse("calendarmeal_cell", args=[date.isoformat(), MealType.DINNER])
+        )
+
+        # No photo: the placeholder tile keeps rows aligned.
+        self.assertContains(lunch, "slot__thumb slot__thumb--empty")
+        self.assertContains(lunch, '<div class="slot__body">')
+        self.assertContains(lunch, "Replace lunch on Monday")
+        self.assertContains(dinner, "Nothing planned")
+        self.assertContains(dinner, 'aria-label="Add dinner on Monday"')
