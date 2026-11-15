@@ -175,3 +175,9 @@ CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=["http://localhost:8001"],
 )
+
+# Own cookie names: cookies are shared per host, not per port, so another
+# Django app on the same host (e.g. the blog on :8001) would otherwise
+# overwrite our session/CSRF cookies and log us out.
+SESSION_COOKIE_NAME = "mealplanner_sessionid"
+CSRF_COOKIE_NAME = "mealplanner_csrftoken"
