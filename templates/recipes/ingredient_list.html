@@ -11,6 +11,9 @@
   <a class="back-link" href="{% url 'recipe_list' %}">{% include "icons/chevron-left.svg" %}Back to recipes</a>
   <header class="page-header">
     <h1 class="page-title">{% include "icons/list.svg" %}Ingredients</h1>
+    <div class="page-header__actions">
+      <a class="btn btn--primary" href="{% url 'ingredient_create' %}">{% include "icons/plus.svg" %}New ingredient</a>
+    </div>
   </header>
 
   {% regroup ingredient_list by category as category_groups %}
@@ -24,14 +27,16 @@
         </h2>
         <ul class="ingredient-index__items">
           {% for ingredient in group.list %}
-            <li>{{ ingredient.name|capfirst }}</li>
+            {# Tap a name to rename it, change its category or delete it. #}
+            <li><a class="ingredient-index__link" href="{% url 'ingredient_update' ingredient.pk %}">{{ ingredient.name|capfirst }}</a></li>
           {% endfor %}
         </ul>
       </section>
     {% empty %}
       <div class="empty-state">
         <p class="empty-state__title">No ingredients yet</p>
-        <p>They're added automatically when you save a recipe.</p>
+        <p>They're added when you save a recipe, or you can add one now.</p>
+        <p><a class="btn btn--primary" href="{% url 'ingredient_create' %}">{% include "icons/plus.svg" %}New ingredient</a></p>
       </div>
     {% endfor %}
   </div>

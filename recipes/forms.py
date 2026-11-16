@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from .models import Recipe, RecipeIngredient, Ingredient
+from .models import Ingredient, IngredientCategory, Recipe, RecipeIngredient
 
 
 class RecipeIngredientForm(forms.ModelForm):
@@ -50,3 +50,39 @@ RecipeIngredientFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+class CategoryChoiceField(forms.ModelChoiceField):
+    """Category names are stored lowercase; show them capitalized."""
+
+    def label_from_instance(self, obj):
+        return obj.name[:1].upper() + obj.name[1:]
+
+
+class IngredientForm(forms.ModelForm):
+    """Add / rename / recategorize an ingredient outside a recipe."""
+
+    category = CategoryChoiceField(queryset=IngredientCategory.objects.all())
+
+    class Meta:
+        model = Ingredient
+        fields = ["name", "category"]
+        widgets = {"name": forms.TextInput(attrs={"autocomplete": "off"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields["category"].initial = IngredientCategory.other()
+
+    def clean_name(self):
+        # Same normalization as Ingredient.save(), so the uniqueness check
+        # below matches what will actually be stored.
+        name = self.cleaned_data["name"].strip().lower()
+        clash = Ingredient.objects.filter(name__iexact=name).exclude(
+            pk=self.instance.pk
+        )
+        if clash.exists():
+            raise forms.ValidationError(
+                f"There's already an ingredient called “{name}”."
+            )
+        return name

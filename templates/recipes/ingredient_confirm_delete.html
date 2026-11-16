@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ object.name|capfirst }} · Meal Planner{% endblock %}
+
+{% block content %}
+  <div class="auth-card">
+    {% if recipes_using %}
+      {# Recipe rows protect their ingredient: explain instead of failing. #}
+      <h1>“{{ object.name|capfirst }}” is in use</h1>
+      <p class="text-secondary">Remove it from these recipes first, then you can delete it.</p>
+      <ul class="usage-list">
+        {% for recipe in recipes_using %}
+          <li><a href="{% url 'recipe_update' recipe.pk %}">{{ recipe.name }}</a></li>
+        {% endfor %}
+      </ul>
+      <div class="form-actions">
+        <a class="btn btn--secondary" href="{% url 'ingredient_update' object.pk %}">Back</a>
+      </div>
+    {% else %}
+      <h1>Delete ingredient?</h1>
+      <p class="text-secondary">“{{ object.name|capfirst }}” isn't used in any recipe. This can't be undone.</p>
+      <form method="post" class="form-actions">
+        {% csrf_token %}
+        <a class="btn btn--secondary" href="{% url 'ingredient_update' object.pk %}">Cancel</a>
+        <button type="submit" class="btn--danger-solid">Delete ingredient</button>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -499,5 +499,82 @@ class DefaultCategoryTests(LoggedInTestCase):
         response = self.client.get(reverse("ingredient_list"))
         self.assertContains(response, "Frutos secos")
         # Ingredient names are capitalized in a plain dotted list, no cards.
-        self.assertContains(response, "<li>Nueces</li>", html=True)
+        self.assertContains(response, ">Nueces</a></li>")
         self.assertNotContains(response, 'class="card')
+
+
+class IngredientManagementTests(LoggedInTestCase):
+    def setUp(self):
+        super().setUp()
+        self.veg = IngredientCategory.objects.get(name="frutas y verduras")
+        self.onion = Ingredient.objects.create(name="cebolla", category=self.veg)
+
+    def test_list_links_each_ingredient_and_offers_new(self):
+        response = self.client.get(reverse("ingredient_list"))
+        self.assertContains(response, reverse("ingredient_create"))
+        self.assertContains(
+            response, f'href="{reverse("ingredient_update", args=[self.onion.pk])}"'
+        )
+
+    def test_create_normalizes_and_defaults_to_otros(self):
+        form_page = self.client.get(reverse("ingredient_create"))
+        otros = IngredientCategory.other()
+        self.assertContains(
+            form_page, f'<option value="{otros.pk}" selected>Otros</option>', html=True
+        )
+
+        response = self.client.post(
+            reverse("ingredient_create"), {"name": "  Ajo ", "category": otros.pk}
+        )
+        self.assertRedirects(response, reverse("ingredient_list"))
+        self.assertTrue(Ingredient.objects.filter(name="ajo", category=otros).exists())
+
+    def test_duplicate_name_is_rejected_case_insensitively(self):
+        response = self.client.post(
+            reverse("ingredient_create"), {"name": "CEBOLLA", "category": self.veg.pk}
+        )
+        # (The apostrophe is HTML-escaped, so match the rest of the message.)
+        self.assertContains(response, "already an ingredient called “cebolla”.")
+        self.assertEqual(Ingredient.objects.filter(name="cebolla").count(), 1)
+
+    def test_rename_and_recategorize_keeps_recipes_pointing_at_it(self):
+        recipe = Recipe.objects.create(name="Sopa", description="d", servings=2)
+        RecipeIngredient.objects.create(recipe=recipe, ingredient=self.onion)
+        otros = IngredientCategory.other()
+
+        url = reverse("ingredient_update", args=[self.onion.pk])
+        self.assertContains(self.client.get(url), "Used in 1 recipe.")
+        self.client.post(url, {"name": "Cebolla morada", "category": otros.pk})
+
+        self.onion.refresh_from_db()
+        self.assertEqual(
+            (self.onion.name, self.onion.category), ("cebolla morada", otros)
+        )
+        self.assertEqual(recipe.recipeingredient_set.get().ingredient, self.onion)
+
+    def test_renaming_to_itself_is_allowed(self):
+        response = self.client.post(
+            reverse("ingredient_update", args=[self.onion.pk]),
+            {"name": "Cebolla", "category": self.veg.pk},
+        )
+        self.assertRedirects(response, reverse("ingredient_list"))
+
+    def test_unused_ingredient_can_be_deleted(self):
+        url = reverse("ingredient_delete", args=[self.onion.pk])
+        self.assertContains(self.client.get(url), "Delete ingredient</button>")
+        self.assertRedirects(self.client.post(url), reverse("ingredient_list"))
+        self.assertFalse(Ingredient.objects.filter(pk=self.onion.pk).exists())
+
+    def test_ingredient_in_use_lists_recipes_and_is_not_deleted(self):
+        recipe = Recipe.objects.create(name="Sopa", description="d", servings=2)
+        RecipeIngredient.objects.create(recipe=recipe, ingredient=self.onion)
+        url = reverse("ingredient_delete", args=[self.onion.pk])
+
+        page = self.client.get(url)
+        self.assertContains(page, "is in use")
+        self.assertContains(page, reverse("recipe_update", args=[recipe.pk]))
+        self.assertNotContains(page, "Delete ingredient</button>")
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Ingredient.objects.filter(pk=self.onion.pk).exists())

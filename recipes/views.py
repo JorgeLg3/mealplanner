@@ -11,8 +11,14 @@ from django.views.generic import (
 )
 from planner.models import CalendarMeal, TemplateMeal
 
-from .models import Ingredient, Recipe, RecipeCategory, other_last
-from .forms import RecipeIngredientFormSet
+from .models import (
+    Ingredient,
+    Recipe,
+    RecipeCategory,
+    RecipeIngredient,
+    other_last,
+)
+from .forms import IngredientForm, RecipeIngredientFormSet
 
 
 class RecipeListView(ListView):
@@ -70,6 +76,56 @@ class IngredientListView(ListView):
     queryset = Ingredient.objects.select_related("category").order_by(
         other_last("category__name"), "category__name", "name"
     )
+
+
+class IngredientCreateView(LoginRequiredMixin, CreateView):
+    model = Ingredient
+    form_class = IngredientForm
+    template_name = "recipes/ingredient_form.html"
+    success_url = reverse_lazy("ingredient_list")
+
+
+class IngredientUpdateView(LoginRequiredMixin, UpdateView):
+    """Rename / recategorize. Recipes keep pointing at the same ingredient,
+    so a rename shows up in all of them."""
+
+    model = Ingredient
+    form_class = IngredientForm
+    template_name = "recipes/ingredient_form.html"
+    success_url = reverse_lazy("ingredient_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["recipe_count"] = (
+            RecipeIngredient.objects.filter(ingredient=self.object)
+            .values("recipe")
+            .distinct()
+            .count()
+        )
+        return context
+
+
+class IngredientDeleteView(LoginRequiredMixin, DeleteView):
+    """Recipe rows PROTECT their ingredient, so one still used in a recipe
+    can't be deleted: list those recipes instead of crashing."""
+
+    model = Ingredient
+    template_name = "recipes/ingredient_confirm_delete.html"
+    success_url = reverse_lazy("ingredient_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["recipes_using"] = Recipe.objects.filter(
+            recipeingredient__ingredient=self.object
+        ).distinct()
+        return context
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            # Became used between opening the page and confirming.
+            return self.render_to_response(self.get_context_data())
 
 
 class RecipeDetailView(DetailView):

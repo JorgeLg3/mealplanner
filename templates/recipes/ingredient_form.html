@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Edit {{ object.name|capfirst }}{% else %}New ingredient{% endif %} · Meal Planner{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/recipes.css' %}">
+{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{% url 'ingredient_list' %}">{% include "icons/chevron-left.svg" %}Back to ingredients</a>
+  <header class="page-header">
+    <div>
+      <h1>{% if object %}{{ object.name|capfirst }}{% else %}New ingredient{% endif %}</h1>
+      {% if object %}
+        <p class="page-header__subtitle">Used in {{ recipe_count }} recipe{{ recipe_count|pluralize }}. Renaming changes it in all of them.</p>
+      {% endif %}
+    </div>
+  </header>
+
+  <form method="post" class="panel form-narrow">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}<p class="field__error">{{ form.name.errors|join:" " }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="{{ form.category.id_for_label }}">Category</label>
+      {{ form.category }}
+      <span class="field__help">Shopping lists are grouped by this.</span>
+      {% if form.category.errors %}<p class="field__error">{{ form.category.errors|join:" " }}</p>{% endif %}
+    </div>
+    <div class="form-actions ingredient-form__actions">
+      {% if object %}
+        <a class="btn btn--danger ingredient-form__delete" href="{% url 'ingredient_delete' object.pk %}">{% include "icons/trash.svg" %}Delete</a>
+      {% endif %}
+      <a class="btn btn--secondary" href="{% url 'ingredient_list' %}">Cancel</a>
+      <button type="submit">{% if object %}Save{% else %}Add ingredient{% endif %}</button>
+    </div>
+  </form>
+{% endblock %}

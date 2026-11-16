@@ -625,3 +625,24 @@
     flex: 1;
   }
 }
+
+/* Ingredient names are links to their edit page; keep the index calm. */
+.ingredient-index__link {
+  color: var(--color-text);
+}
+
+.ingredient-index__link:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Delete sits apart, on the left of Cancel / Save. */
+.ingredient-form__delete {
+  margin-right: auto;
+}
+
+.form-narrow .field select,
+.form-narrow .field input {
+  width: 100%;
+}
